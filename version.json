@@ -1,0 +1,5 @@
+{
+    "date":  "2026-11-05 12:42:58",
+    "message":  "feat(updater): add automatic GitHub update check on startup with frosted-glass popup, auto-restart, and background auto-loader daemon",
+    "version":  "3.2.0"
+}

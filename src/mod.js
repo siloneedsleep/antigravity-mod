@@ -3,12 +3,33 @@
     if (typeof window === "undefined" || !window.document) return;
     if (window.top && window.self && window.top !== window.self) return;
 
+    // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
+    const BUNDLED_BUILD_ID = "v3.2.0";
+    if (!window.__agBootingCachedBundle) {
+        try {
+            const cachedBundle = localStorage.getItem("ag_mod_cached_bundle");
+            const cachedSha = localStorage.getItem("ag_mod_installed_sha");
+            const bundledSha = localStorage.getItem("ag_mod_bundled_sha");
+            if (cachedBundle && cachedSha && cachedSha !== bundledSha && cachedBundle.length > 5000) {
+                window.__agBootingCachedBundle = true;
+                (0, eval)(cachedBundle);
+                window.__agBootingCachedBundle = false;
+                window.__agModLoaded = true;
+                return;
+            }
+        } catch (err) {
+            window.__agBootingCachedBundle = false;
+            console.warn("[Antigravity Mod] Cached bundle fallback:", err);
+        }
+    }
+    window.__agModLoaded = true;
+
     if (typeof window.__agModCleanup === "function") {
         try { window.__agModCleanup(); } catch (e) {}
     }
 
     const wasModTabActive = !!document.querySelector(".ag-mod-tab-active");
-    ["ag-mod-modal", "ag-mod-quick-modal", "ag-settings-mod-pane", "ag-furina-companion"].forEach(id => {
+    ["ag-mod-modal", "ag-mod-quick-modal", "ag-settings-mod-pane", "ag-furina-companion", "ag-update-backdrop", "ag-update-toast"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
     });
@@ -22,7 +43,8 @@
         petUrl: "furina-3d",
         accent: "#3b82f6",
         showLangBtn: true,
-        followTyping: true
+        followTyping: true,
+        autoCheckUpdate: true
     };
 
     let savedCfg = {};
@@ -1660,6 +1682,28 @@
                 </div>
             </div>
 
+            <div class="ag-mod-section">
+                <div class="ag-mod-section-title">Cập nhật tự động từ GitHub (Auto-Updater)</div>
+                <div class="ag-mod-card">
+                    <div class="ag-mod-row">
+                        <div>
+                            <div class="ag-mod-label">Phiên bản Mod đang cài đặt</div>
+                            <div class="ag-mod-desc" id="ag-pane-ver-desc">Kho lưu trữ: <b>siloneedsleep/antigravity-mod</b> • Mã bản dựng: <code id="ag-pane-cur-sha">#latest</code></div>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button type="button" class="ag-btn ag-btn-primary" id="ag-pane-check-upd">🔄 Kiểm tra cập nhật</button>
+                        </div>
+                    </div>
+                    <div class="ag-mod-row">
+                        <div>
+                            <div class="ag-mod-label">Tự động kiểm tra bản mới mỗi khi mở Antigravity</div>
+                            <div class="ag-mod-desc">Hiển thị pop-up mờ thông báo khi phát hiện commit mới trên GitHub và tự khởi động lại sau khi cập nhật</div>
+                        </div>
+                        <input type="checkbox" id="ag-pane-auto-upd" style="width:18px;height:18px;accent-color:var(--ag-accent);cursor:pointer;">
+                    </div>
+                </div>
+            </div>
+
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;">
                 <span class="ag-toast-saved" id="ag-pane-saved-msg">✓ Đã lưu và áp dụng cài đặt!</span>
                 <div style="display:flex;gap:10px;">
@@ -1684,6 +1728,7 @@
             config.accent = pane.querySelector("#ag-pane-acc").value.trim();
             config.showLangBtn = pane.querySelector("#ag-pane-show-langbtn").checked;
             config.followTyping = pane.querySelector("#ag-pane-follow-typing").checked;
+            config.autoCheckUpdate = pane.querySelector("#ag-pane-auto-upd").checked;
             localStorage.setItem("ag_mod_config", JSON.stringify(config));
             applyConfig();
             syncSettingsModPaneValues();
@@ -1698,6 +1743,8 @@
         };
         pane.querySelector("#ag-pane-show-langbtn").onchange = saveFromPane;
         pane.querySelector("#ag-pane-follow-typing").onchange = saveFromPane;
+        pane.querySelector("#ag-pane-auto-upd").onchange = saveFromPane;
+        pane.querySelector("#ag-pane-check-upd").onclick = () => checkForGitHubUpdates(true);
 
         pane.querySelectorAll("[data-bg]").forEach(chip => {
             chip.onclick = () => {
@@ -1749,6 +1796,7 @@
     }
 
     function syncSettingsModPaneValues() {
+        const curSha = (localStorage.getItem("ag_mod_installed_sha") || "6e83ec8").slice(0, 7);
         const pane = document.getElementById("ag-settings-mod-pane");
         if (pane) {
             const bgInp = pane.querySelector("#ag-pane-bg");
@@ -1759,6 +1807,8 @@
             const accPick = pane.querySelector("#ag-pane-acc-picker");
             const showBtn = pane.querySelector("#ag-pane-show-langbtn");
             const followBtn = pane.querySelector("#ag-pane-follow-typing");
+            const autoUpdBtn = pane.querySelector("#ag-pane-auto-upd");
+            const curShaEl = pane.querySelector("#ag-pane-cur-sha");
             const btnVi = pane.querySelector("#ag-pane-lang-vi");
             const btnEn = pane.querySelector("#ag-pane-lang-en");
 
@@ -1770,6 +1820,8 @@
             if (accPick && /^#[0-9a-fA-F]{6}$/.test(config.accent)) accPick.value = config.accent;
             if (showBtn) showBtn.checked = config.showLangBtn !== false;
             if (followBtn) followBtn.checked = config.followTyping !== false;
+            if (autoUpdBtn) autoUpdBtn.checked = config.autoCheckUpdate !== false;
+            if (curShaEl) curShaEl.textContent = "#" + curSha;
             if (btnVi && btnEn) {
                 btnVi.className = "ag-btn " + (currentLang === "VI" ? "ag-btn-primary" : "ag-btn-ghost");
                 btnEn.className = "ag-btn " + (currentLang === "EN" ? "ag-btn-primary" : "ag-btn-ghost");
@@ -1783,12 +1835,235 @@
             const qPet = qModal.querySelector("#ag-inp-pet");
             const qAcc = qModal.querySelector("#ag-inp-acc");
             const qFollow = qModal.querySelector("#ag-inp-follow");
+            const qSha = qModal.querySelector("#ag-q-sha");
             if (qBg) qBg.value = config.bgUrl;
             if (qOp) qOp.value = config.bgOpacity;
             if (qPet) qPet.value = config.petUrl;
             if (qAcc) qAcc.value = config.accent;
             if (qFollow) qFollow.checked = config.followTyping !== false;
+            if (qSha) qSha.textContent = "#" + curSha;
         }
+    }
+
+    // GitHub Auto-Updater Engine & Blurred Modal
+    let latestRemoteCommit = null;
+
+    function ensureUpdateModal() {
+        let backdrop = document.getElementById("ag-update-backdrop");
+        if (backdrop) return backdrop;
+
+        backdrop = document.createElement("div");
+        backdrop.id = "ag-update-backdrop";
+        backdrop.innerHTML = `
+            <div id="ag-update-modal">
+                <div class="ag-upd-badge" id="ag-upd-badge">✨ BẢN CẬP NHẬT MỚI TỪ GITHUB</div>
+                <h3 class="ag-upd-title" id="ag-upd-title">💧 Phát hiện bản cập nhật Antigravity Mod!</h3>
+                <p class="ag-upd-sub" id="ag-upd-sub">Đã có phiên bản mới trên kho lưu trữ <b>siloneedsleep/antigravity-mod</b>. Bạn có muốn tải về và khởi động lại ứng dụng ngay không?</p>
+                <div class="ag-upd-versions">
+                    <span class="ag-upd-ver-pill" id="ag-upd-ver-cur">Hiện tại: #6e83ec8</span>
+                    <span style="color:#64748b;">➔</span>
+                    <span class="ag-upd-ver-pill new" id="ag-upd-ver-new">Mới nhất: #latest</span>
+                </div>
+                <div class="ag-upd-notes" id="ag-upd-notes">Đang tải thông tin chi tiết...</div>
+                <div class="ag-upd-progress-wrap" id="ag-upd-progress-wrap">
+                    <div class="ag-upd-progress-track">
+                        <div class="ag-upd-progress-bar" id="ag-upd-progress-bar"></div>
+                    </div>
+                    <div class="ag-upd-status" id="ag-upd-status">Đang kết nối tới GitHub...</div>
+                </div>
+                <div class="ag-actions" id="ag-upd-actions">
+                    <button type="button" class="ag-btn ag-btn-ghost" id="ag-upd-later">Để sau</button>
+                    <button type="button" class="ag-btn ag-btn-ghost" id="ag-upd-github">Xem GitHub ↗</button>
+                    <button type="button" class="ag-btn ag-btn-primary" id="ag-upd-confirm">🚀 Cập nhật & Khởi động lại</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(backdrop);
+
+        backdrop.querySelector("#ag-upd-later").onclick = () => {
+            backdrop.classList.remove("open");
+            if (latestRemoteCommit && latestRemoteCommit.sha) {
+                sessionStorage.setItem("ag_mod_dismissed_sha", latestRemoteCommit.sha);
+            }
+        };
+        backdrop.querySelector("#ag-upd-github").onclick = () => {
+            window.open("https://github.com/siloneedsleep/antigravity-mod/commits/main", "_blank");
+        };
+        backdrop.querySelector("#ag-upd-confirm").onclick = () => {
+            if (latestRemoteCommit) performGitHubUpdate(latestRemoteCommit);
+        };
+        return backdrop;
+    }
+
+    function openUpdatePopup(commitInfo, isAlreadyLatest) {
+        latestRemoteCommit = commitInfo;
+        const backdrop = ensureUpdateModal();
+        const curSha = (localStorage.getItem("ag_mod_installed_sha") || "6e83ec8").slice(0, 7);
+        const newSha = (commitInfo.sha || "latest").slice(0, 7);
+
+        backdrop.querySelector("#ag-upd-badge").textContent = isAlreadyLatest
+            ? "✓ ĐANG Ở PHIÊN BẢN MỚI NHẤT"
+            : "✨ BẢN CẬP NHẬT MỚI TỪ GITHUB";
+        backdrop.querySelector("#ag-upd-title").textContent = isAlreadyLatest
+            ? "💧 Antigravity Mod đã là bản mới nhất!"
+            : "💧 Phát hiện bản cập nhật Antigravity Mod!";
+        backdrop.querySelector("#ag-upd-sub").innerHTML = isAlreadyLatest
+            ? "Bạn đang sử dụng phiên bản mới nhất từ <b>siloneedsleep/antigravity-mod</b>. Bạn vẫn có thể bấm cập nhật lại để làm mới toàn bộ tệp và khởi động lại ứng dụng."
+            : "Đã có bản cập nhật mới trên kho lưu trữ <b>siloneedsleep/antigravity-mod</b>. Nhấn Cập nhật để tự động tải về và khởi động lại Antigravity.";
+        backdrop.querySelector("#ag-upd-ver-cur").textContent = `Đang dùng: #${curSha}`;
+        backdrop.querySelector("#ag-upd-ver-new").textContent = `GitHub: #${newSha}`;
+        backdrop.querySelector("#ag-upd-notes").textContent = `📝 Nội dung cập nhật (#${newSha}):\n${commitInfo.message || "Cập nhật tính năng & giao diện Tiếng Việt"}\n\n🕒 Thời gian: ${commitInfo.dateStr || "Vừa cập nhật"}`;
+        backdrop.querySelector("#ag-upd-progress-wrap").classList.remove("active");
+        backdrop.querySelector("#ag-upd-progress-bar").style.width = "0%";
+        backdrop.querySelector("#ag-upd-confirm").disabled = false;
+        backdrop.querySelector("#ag-upd-confirm").textContent = isAlreadyLatest
+            ? "🔄 Cài đặt lại & Khởi động lại"
+            : "🚀 Cập nhật & Khởi động lại";
+
+        backdrop.classList.add("open");
+
+        // Furina excited bubble notification
+        const bubble = document.getElementById("ag-furina-bubble");
+        if (bubble && !isAlreadyLatest) {
+            bubble.textContent = "Ồ! Trên GitHub vừa có bản cập nhật mới kìa! Mau cập nhật cho ta đi~ 💧✨";
+            bubble.classList.add("show");
+            furina3DState.bounceVel = 1800;
+            setTimeout(() => bubble.classList.remove("show"), 4500);
+        }
+    }
+
+    async function performGitHubUpdate(commitInfo) {
+        const backdrop = ensureUpdateModal();
+        const progWrap = backdrop.querySelector("#ag-upd-progress-wrap");
+        const progBar = backdrop.querySelector("#ag-upd-progress-bar");
+        const statusEl = backdrop.querySelector("#ag-upd-status");
+        const confirmBtn = backdrop.querySelector("#ag-upd-confirm");
+        const laterBtn = backdrop.querySelector("#ag-upd-later");
+
+        confirmBtn.disabled = true;
+        laterBtn.disabled = true;
+        confirmBtn.textContent = "⏳ Đang cập nhật...";
+        progWrap.classList.add("active");
+
+        try {
+            const ref = commitInfo.sha || "main";
+            const rawBase = `https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/${ref}`;
+
+            progBar.style.width = "28%";
+            statusEl.textContent = "Đang tải gói giao diện (src/styles.css) từ GitHub...";
+            const cssRes = await fetch(`${rawBase}/src/styles.css?t=${Date.now()}`, { cache: "no-store" });
+            if (!cssRes.ok) throw new Error("Không thể tải src/styles.css (" + cssRes.status + ")");
+            const newCss = await cssRes.text();
+
+            progBar.style.width = "68%";
+            statusEl.textContent = "Đang tải nhân xử lý (src/mod.js) & cấu hình Furina 3D...";
+            const jsRes = await fetch(`${rawBase}/src/mod.js?t=${Date.now()}`, { cache: "no-store" });
+            if (!jsRes.ok) throw new Error("Không thể tải src/mod.js (" + jsRes.status + ")");
+            const newJs = await jsRes.text();
+
+            progBar.style.width = "92%";
+            statusEl.textContent = "Đang biên dịch và ghi đè vào bộ nhớ ứng dụng...";
+            const compiledBundle = newJs.replace("__AG_CSS_JSON__", JSON.stringify(newCss));
+
+            localStorage.setItem("ag_mod_cached_bundle", compiledBundle);
+            localStorage.setItem("ag_mod_installed_sha", commitInfo.sha);
+            localStorage.setItem("ag_mod_installed_msg", commitInfo.message || "");
+            localStorage.setItem("ag_mod_just_updated", commitInfo.sha.slice(0, 7));
+
+            progBar.style.width = "100%";
+            statusEl.textContent = "✓ Cập nhật hoàn tất! Đang khởi động lại Antigravity...";
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 900);
+        } catch (err) {
+            statusEl.textContent = "❌ Lỗi khi tải bản cập nhật: " + (err.message || String(err));
+            confirmBtn.disabled = false;
+            laterBtn.disabled = false;
+            confirmBtn.textContent = "Thử lại";
+        }
+    }
+
+    async function checkForGitHubUpdates(isManual) {
+        if (!isManual && config.autoCheckUpdate === false) return;
+        if (!isManual && sessionStorage.getItem("ag_mod_checked_session") === "1") return;
+
+        try {
+            let sha = "";
+            let message = "";
+            let dateStr = "";
+
+            const res = await fetch("https://api.github.com/repos/siloneedsleep/antigravity-mod/commits/main", {
+                cache: "no-store",
+                headers: { "Accept": "application/vnd.github.v3+json" }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                sha = data.sha || "";
+                message = (data.commit && data.commit.message) || "";
+                if (data.commit && data.commit.committer && data.commit.committer.date) {
+                    dateStr = new Date(data.commit.committer.date).toLocaleString("vi-VN");
+                }
+            } else {
+                const vRes = await fetch(`https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/main/version.json?t=${Date.now()}`, { cache: "no-store" });
+                if (vRes.ok) {
+                    const vData = await vRes.json();
+                    sha = vData.sha || "";
+                    message = vData.message || "";
+                    dateStr = vData.date || "";
+                }
+            }
+
+            if (!sha) return;
+            sessionStorage.setItem("ag_mod_checked_session", "1");
+
+            const installedSha = localStorage.getItem("ag_mod_installed_sha") || "";
+            if (!installedSha) {
+                localStorage.setItem("ag_mod_installed_sha", sha);
+                syncSettingsModPaneValues();
+                if (isManual) {
+                    openUpdatePopup({ sha, message, dateStr }, true);
+                }
+                return;
+            }
+
+            const isNewer = installedSha.slice(0, 7) !== sha.slice(0, 7);
+            if (isNewer) {
+                if (!isManual && sessionStorage.getItem("ag_mod_dismissed_sha") === sha) return;
+                openUpdatePopup({ sha, message, dateStr }, false);
+            } else if (isManual) {
+                openUpdatePopup({ sha, message, dateStr }, true);
+            }
+        } catch (err) {
+            console.warn("[Antigravity Mod] GitHub update check skipped:", err);
+        }
+    }
+
+    function showPostUpdateToast() {
+        const justUpdatedSha = localStorage.getItem("ag_mod_just_updated");
+        if (!justUpdatedSha) return;
+        localStorage.removeItem("ag_mod_just_updated");
+
+        let toast = document.getElementById("ag-update-toast");
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "ag-update-toast";
+            document.body.appendChild(toast);
+        }
+        toast.innerHTML = `<span>✨</span><span>Đã cập nhật <b>Antigravity Mod</b> lên bản <code>#${justUpdatedSha}</code> thành công!</span>`;
+        requestAnimationFrame(() => toast.classList.add("show"));
+        setTimeout(() => toast.classList.remove("show"), 4500);
+
+        setTimeout(() => {
+            const bubble = document.getElementById("ag-furina-bubble");
+            if (bubble) {
+                bubble.textContent = `Yay! Ta vừa được nâng cấp lên phiên bản #${justUpdatedSha} mới nhất rồi nè~ 💧✨`;
+                bubble.classList.add("show");
+                furina3DState.bounceVel = 2200;
+                furina3DState.spinTarget += Math.PI * 2;
+                setTimeout(() => bubble.classList.remove("show"), 4200);
+            }
+        }, 600);
     }
 
     function ensureSettingsModTab() {
@@ -1838,10 +2113,13 @@
             document.body.appendChild(overlay);
         }
 
+        ensureUpdateModal();
+
         let modal = document.getElementById("ag-mod-quick-modal");
         if (!modal) {
             modal = document.createElement("div");
             modal.id = "ag-mod-quick-modal";
+            const curSha = (localStorage.getItem("ag_mod_installed_sha") || "6e83ec8").slice(0, 7);
             modal.innerHTML = `
                 <h3><span>💧 Antigravity Mod (Alt + M)</span><span style="cursor:pointer" id="ag-mod-close">✕</span></h3>
                 <div class="ag-field">
@@ -1876,6 +2154,10 @@
                     <label>Màu viền chủ đạo (Hex)</label>
                     <input type="text" id="ag-inp-acc" value="${config.accent}">
                 </div>
+                <div class="ag-field" style="flex-direction:row;align-items:center;justify-content:space-between;background:rgba(30,41,59,0.55);padding:8px 10px;border-radius:8px;border:1px solid rgba(56,189,248,0.2);">
+                    <span>Phiên bản GitHub: <code id="ag-q-sha" style="color:#7dd3fc;">#${curSha}</code></span>
+                    <button type="button" class="ag-btn ag-btn-ghost" id="ag-q-check-upd" style="padding:4px 10px;font-size:11.5px;">🔄 Kiểm tra cập nhật</button>
+                </div>
                 <div class="ag-actions">
                     <button class="ag-btn ag-btn-ghost" id="ag-mod-reset">Mặc định</button>
                     <button class="ag-btn ag-btn-primary" id="ag-mod-save">Lưu thay đổi</button>
@@ -1889,6 +2171,10 @@
             modal.querySelectorAll("[data-qpet]").forEach(c => {
                 c.onclick = () => { modal.querySelector("#ag-inp-pet").value = c.getAttribute("data-qpet"); };
             });
+            modal.querySelector("#ag-q-check-upd").onclick = () => {
+                modal.classList.remove("open");
+                checkForGitHubUpdates(true);
+            };
             modal.querySelector("#ag-mod-close").onclick = () => modal.classList.remove("open");
             modal.querySelector("#ag-mod-save").onclick = () => {
                 config.bgUrl = modal.querySelector("#ag-inp-bg").value.trim();
@@ -1948,6 +2234,11 @@
             return;
         }
         if (e.key === "Escape") {
+            const updModal = document.getElementById("ag-update-backdrop");
+            if (updModal && updModal.classList.contains("open")) {
+                updModal.classList.remove("open");
+                return;
+            }
             const qModal = document.getElementById("ag-mod-quick-modal");
             if (qModal && qModal.classList.contains("open")) {
                 qModal.classList.remove("open");
@@ -1990,6 +2281,8 @@
         ensureSettingsModTab();
         applyConfig();
         translateDOM(currentLang);
+        showPostUpdateToast();
+        setTimeout(() => checkForGitHubUpdates(false), 1200);
 
         document.addEventListener("click", onGlobalClick, true);
         window.addEventListener("keydown", onGlobalKeydown, true);
