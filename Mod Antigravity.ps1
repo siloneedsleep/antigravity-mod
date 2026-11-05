@@ -2701,12 +2701,14 @@ $JsContent = @'
 
             progBar.style.width = "92%";
             statusEl.textContent = "Đang biên dịch và ghi đè vào bộ nhớ ứng dụng...";
-            const compiledBundle = newJs.replace("__AG_CSS_JSON__", JSON.stringify(newCss));
+            const placeholderToken = "__" + "AG_CSS_JSON" + "__";
+            const compiledBundle = newJs.replace(placeholderToken, JSON.stringify(newCss));
 
             localStorage.setItem("ag_mod_cached_bundle", compiledBundle);
             localStorage.setItem("ag_mod_installed_sha", commitInfo.sha);
             localStorage.setItem("ag_mod_installed_msg", commitInfo.message || "");
             localStorage.setItem("ag_mod_just_updated", commitInfo.sha.slice(0, 7));
+            sessionStorage.removeItem("ag_mod_checked_session");
 
             progBar.style.width = "100%";
             statusEl.textContent = "✓ Cập nhật hoàn tất! Đang khởi động lại Antigravity...";
@@ -3149,20 +3151,18 @@ while ($true) {
             }
         } catch {}
     }
-    Start-Sleep -Milliseconds 1800
+    Start-Sleep -Milliseconds 900
 }
 '@
 [System.IO.File]::WriteAllText($DaemonScriptPath, $DaemonCode, $Utf8NoBom)
 
-$VbsLauncherPath = "$ModDataDir\launch-daemon.vbs"
-$VbsContent = "CreateObject(`"WScript.Shell`").Run `"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"`"$DaemonScriptPath`"`"`", 0, False"
-[System.IO.File]::WriteAllText($VbsLauncherPath, $VbsContent, [System.Text.Encoding]::ASCII)
-
-# Đăng ký tự khởi động ngầm cùng Windows (HKCU Run) và kích hoạt ngay
+# Đăng ký tự khởi động ngầm cùng Windows (HKCU Run) và kích hoạt ngay dưới dạng tiến trình độc lập ẩn (Hidden WMI Process)
 try {
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "AntigravityModDaemon" -Value "wscript.exe `"$VbsLauncherPath`"" -Force
+    $DaemonCmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$DaemonScriptPath`""
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "AntigravityModDaemon" -Value $DaemonCmd -Force
     Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe' AND ProcessId != $PID AND CommandLine LIKE '%ag-daemon.ps1%'" -ErrorAction SilentlyContinue | Invoke-CimMethod -MethodName Terminate | Out-Null
-    Start-Process "wscript.exe" -ArgumentList "`"$VbsLauncherPath`""
+    $StartupCfg = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
+    Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $DaemonCmd; ProcessStartupInformation = $StartupCfg } | Out-Null
     Write-Host "[+] Da kich hoat dich vu Auto-Mod & GitHub Auto-Update vinh vien!" -ForegroundColor Green
 } catch {}
 

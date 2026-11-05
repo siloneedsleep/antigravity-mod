@@ -1963,12 +1963,14 @@
 
             progBar.style.width = "92%";
             statusEl.textContent = "Đang biên dịch và ghi đè vào bộ nhớ ứng dụng...";
-            const compiledBundle = newJs.replace("__AG_CSS_JSON__", JSON.stringify(newCss));
+            const placeholderToken = "__" + "AG_CSS_JSON" + "__";
+            const compiledBundle = newJs.replace(placeholderToken, JSON.stringify(newCss));
 
             localStorage.setItem("ag_mod_cached_bundle", compiledBundle);
             localStorage.setItem("ag_mod_installed_sha", commitInfo.sha);
             localStorage.setItem("ag_mod_installed_msg", commitInfo.message || "");
             localStorage.setItem("ag_mod_just_updated", commitInfo.sha.slice(0, 7));
+            sessionStorage.removeItem("ag_mod_checked_session");
 
             progBar.style.width = "100%";
             statusEl.textContent = "✓ Cập nhật hoàn tất! Đang khởi động lại Antigravity...";

@@ -1,5 +1,5 @@
 {
-    "date":  "2026-11-05 12:42:58",
-    "message":  "feat(updater): add automatic GitHub update check on startup with frosted-glass popup, auto-restart, and background auto-loader daemon",
-    "version":  "3.2.0"
+    "date":  "2026-11-05 13:08:13",
+    "message":  "fix(updater): prevent CSS token replacement inside performGitHubUpdate and use detached WMI hidden daemon",
+    "version":  "3.2.1"
 }
