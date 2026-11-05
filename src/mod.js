@@ -2042,6 +2042,7 @@
     }
 
     function showPostUpdateToast() {
+        if (!document.body) return;
         const justUpdatedSha = localStorage.getItem("ag_mod_just_updated");
         if (!justUpdatedSha) return;
         localStorage.removeItem("ag_mod_just_updated");
@@ -2054,7 +2055,7 @@
         }
         toast.innerHTML = `<span>✨</span><span>Đã cập nhật <b>Antigravity Mod</b> lên bản <code>#${justUpdatedSha}</code> thành công!</span>`;
         requestAnimationFrame(() => toast.classList.add("show"));
-        setTimeout(() => toast.classList.remove("show"), 4500);
+        setTimeout(() => toast.classList.remove("show"), 4800);
 
         setTimeout(() => {
             const bubble = document.getElementById("ag-furina-bubble");
@@ -2063,9 +2064,9 @@
                 bubble.classList.add("show");
                 furina3DState.bounceVel = 2200;
                 furina3DState.spinTarget += Math.PI * 2;
-                setTimeout(() => bubble.classList.remove("show"), 4200);
+                setTimeout(() => bubble.classList.remove("show"), 4500);
             }
-        }, 600);
+        }, 700);
     }
 
     function ensureSettingsModTab() {
@@ -2277,6 +2278,10 @@
     let rafPending = false;
 
     function init() {
+        if (!document.body || document.readyState === "loading") {
+            setTimeout(init, 80);
+            return;
+        }
         injectStyles();
         createUI();
         ensureFurinaCompanion();

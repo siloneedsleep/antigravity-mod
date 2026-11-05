@@ -1,5 +1,5 @@
 {
-    "date":  "2026-11-05 13:08:13",
-    "message":  "fix(updater): prevent CSS token replacement inside performGitHubUpdate and use detached WMI hidden daemon",
-    "version":  "3.2.1"
+    "date":  "2026-11-05 13:11:30",
+    "message":  "fix(daemon): ensure DOM complete check before auto-inject on reload and preserve post-update toast",
+    "version":  "3.2.2"
 }

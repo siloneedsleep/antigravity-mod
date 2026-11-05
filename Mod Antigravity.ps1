@@ -2780,6 +2780,7 @@ $JsContent = @'
     }
 
     function showPostUpdateToast() {
+        if (!document.body) return;
         const justUpdatedSha = localStorage.getItem("ag_mod_just_updated");
         if (!justUpdatedSha) return;
         localStorage.removeItem("ag_mod_just_updated");
@@ -2792,7 +2793,7 @@ $JsContent = @'
         }
         toast.innerHTML = `<span>✨</span><span>Đã cập nhật <b>Antigravity Mod</b> lên bản <code>#${justUpdatedSha}</code> thành công!</span>`;
         requestAnimationFrame(() => toast.classList.add("show"));
-        setTimeout(() => toast.classList.remove("show"), 4500);
+        setTimeout(() => toast.classList.remove("show"), 4800);
 
         setTimeout(() => {
             const bubble = document.getElementById("ag-furina-bubble");
@@ -2801,9 +2802,9 @@ $JsContent = @'
                 bubble.classList.add("show");
                 furina3DState.bounceVel = 2200;
                 furina3DState.spinTarget += Math.PI * 2;
-                setTimeout(() => bubble.classList.remove("show"), 4200);
+                setTimeout(() => bubble.classList.remove("show"), 4500);
             }
-        }, 600);
+        }, 700);
     }
 
     function ensureSettingsModTab() {
@@ -3015,6 +3016,10 @@ $JsContent = @'
     let rafPending = false;
 
     function init() {
+        if (!document.body || document.readyState === "loading") {
+            setTimeout(init, 80);
+            return;
+        }
         injectStyles();
         createUI();
         ensureFurinaCompanion();
@@ -3130,8 +3135,9 @@ while ($true) {
                 $Ct = [System.Threading.CancellationToken]::None
                 $Ws.ConnectAsync([Uri]$Hub.webSocketDebuggerUrl, $Ct).Wait()
 
-                # Check if mod is already loaded in this window
-                $ChkMsg = @{ id = 1; method = "Runtime.evaluate"; params = @{ expression = "Boolean(window.__agModLoaded)"; returnByValue = $true } } | ConvertTo-Json -Compress
+                # Check if DOM is ready and whether mod UI is active in this window
+                $ChkExpr = "(document.readyState === 'complete' && Boolean(document.body)) ? (Boolean(window.__agModLoaded && document.getElementById('ag-lang-btn')) ? 'LOADED' : 'NEEDS_INJECT') : 'LOADING'"
+                $ChkMsg = @{ id = 1; method = "Runtime.evaluate"; params = @{ expression = $ChkExpr; returnByValue = $true } } | ConvertTo-Json -Compress
                 $ChkBytes = [System.Text.Encoding]::UTF8.GetBytes($ChkMsg)
                 $Ws.SendAsync((New-Object System.ArraySegment[byte](,$ChkBytes)), [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $Ct).Wait()
 
@@ -3139,7 +3145,7 @@ while ($true) {
                 $Res = $Ws.ReceiveAsync((New-Object System.ArraySegment[byte](,$Buf)), $Ct).Result
                 $ResJson = [System.Text.Encoding]::UTF8.GetString($Buf, 0, $Res.Count) | ConvertFrom-Json
 
-                if (-not $ResJson.result.result.value) {
+                if ($ResJson.result.result.value -eq 'NEEDS_INJECT') {
                     $InjectJs = [System.IO.File]::ReadAllText($BundlePath, [System.Text.Encoding]::UTF8)
                     $InjMsg = @{ id = 2; method = "Runtime.evaluate"; params = @{ expression = $InjectJs; returnByValue = $true } } | ConvertTo-Json -Compress -Depth 5
                     $InjBytes = [System.Text.Encoding]::UTF8.GetBytes($InjMsg)
