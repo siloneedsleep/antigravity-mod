@@ -1032,9 +1032,14 @@ $JsContent = @'
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.2.0";
+    const BUNDLED_BUILD_ID = "v3.3.0";
     if (!window.__agBootingCachedBundle) {
         try {
+            const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
+            if (lastBuildId !== BUNDLED_BUILD_ID) {
+                localStorage.setItem("ag_mod_bundled_build_id", BUNDLED_BUILD_ID);
+                localStorage.removeItem("ag_mod_cached_bundle");
+            }
             const cachedBundle = localStorage.getItem("ag_mod_cached_bundle");
             const cachedSha = localStorage.getItem("ag_mod_installed_sha");
             const bundledSha = localStorage.getItem("ag_mod_bundled_sha");
@@ -1057,11 +1062,13 @@ $JsContent = @'
     }
 
     const wasModTabActive = !!document.querySelector(".ag-mod-tab-active");
-    ["ag-mod-modal", "ag-mod-quick-modal", "ag-settings-mod-pane", "ag-furina-companion", "ag-update-backdrop", "ag-update-toast"].forEach(id => {
+    const wasDonateTabActive = !!document.querySelector(".ag-donate-tab-active");
+    const wasCreditTabActive = !!document.querySelector(".ag-credit-tab-active");
+    ["ag-mod-modal", "ag-mod-quick-modal", "ag-settings-mod-pane", "ag-settings-donate-pane", "ag-settings-credit-pane", "ag-furina-companion", "ag-update-backdrop", "ag-update-toast"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.remove();
     });
-    document.querySelectorAll(".ag-settings-nav-wrap").forEach(el => el.remove());
+    document.querySelectorAll(".ag-settings-nav-wrap, .ag-settings-donate-wrap, .ag-settings-credit-wrap").forEach(el => el.remove());
 
     const cssText = __AG_CSS_JSON__;
 
@@ -3097,16 +3104,25 @@ $JsContent = @'
         }, 700);
     }
 
+    const VIETQR_CHECK_API = "https://siloneedsleep.app.n8n.cloud/webhook/silo-vietqr-check";
+    const VIETQR_WEBHOOK_API = "https://siloneedsleep.app.n8n.cloud/webhook/silo-vietqr-webhook";
     let shopTimerInterval = null;
+    let shopPollInterval = null;
+    let shopCheckingNow = false;
     let shopOrderState = {
         orderId: "",
+        baseCode: "",
         memo: "",
         amount: 50000,
         tierLabel: "🍜 Phở bò đặc biệt",
         donorName: "",
         createdAt: "",
         remainingSec: 900,
-        paid: false
+        paid: false,
+        txRef: "",
+        receivedAmount: 0,
+        paidAt: "",
+        lastErrorMsg: ""
     };
 
     function generateShopOrder(amount, tierLabel, keepAmountInput) {
@@ -3115,18 +3131,25 @@ $JsContent = @'
         const pad = (n) => String(n).padStart(2, "0");
         const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} - ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
         const donorClean = (shopOrderState.donorName || "").replace(/[^a-zA-Z0-9 ]/g, "").trim().toUpperCase().slice(0, 10);
-        const memo = donorClean ? `SILO${rand6} ${donorClean}` : `SILO${rand6}`;
+        const baseCode = `SILO${rand6}`;
+        const memo = donorClean ? `${baseCode} ${donorClean}` : baseCode;
 
         shopOrderState.orderId = `ORD-${rand6}`;
+        shopOrderState.baseCode = baseCode;
         shopOrderState.memo = memo;
         shopOrderState.amount = Math.max(0, parseInt(amount, 10) || 0);
         if (tierLabel) shopOrderState.tierLabel = tierLabel;
         shopOrderState.createdAt = timeStr;
         shopOrderState.remainingSec = 900;
         shopOrderState.paid = false;
+        shopOrderState.txRef = "";
+        shopOrderState.receivedAmount = 0;
+        shopOrderState.paidAt = "";
+        shopOrderState.lastErrorMsg = "";
 
         renderShopInvoiceUI(keepAmountInput);
         startShopCountdown();
+        startShopAutoPolling();
     }
 
     function startShopCountdown() {
@@ -3147,6 +3170,103 @@ $JsContent = @'
             if (tEl) tEl.textContent = `${m}:${s}`;
             if (fEl) fEl.style.width = `${Math.max(2, (shopOrderState.remainingSec / 900) * 100)}%`;
         }, 1000);
+    }
+
+    function startShopAutoPolling() {
+        if (shopPollInterval) clearInterval(shopPollInterval);
+        shopPollInterval = setInterval(() => {
+            const pane = document.getElementById("ag-settings-donate-pane");
+            const isDonateActive = document.querySelector(".ag-donate-tab-active");
+            if (!pane || !isDonateActive || shopOrderState.paid || shopCheckingNow) return;
+            verifyShopTransactionReal(false);
+        }, 5000);
+    }
+
+    async function verifyShopTransactionReal(isManual) {
+        if (!shopOrderState.baseCode || shopOrderState.paid || shopCheckingNow) return;
+        shopCheckingNow = true;
+        const pane = document.getElementById("ag-settings-donate-pane");
+        const confirmBtn = pane ? pane.querySelector("#ag-shop-confirm-paid") : null;
+        const errBox = pane ? pane.querySelector("#ag-shop-error-box") : null;
+
+        if (isManual && confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "🔄 Đang đối soát TPBank...";
+        }
+
+        try {
+            const url = `${VIETQR_CHECK_API}?code=${encodeURIComponent(shopOrderState.baseCode)}&amount=${encodeURIComponent(shopOrderState.amount)}&t=${Date.now()}`;
+            const res = await fetch(url, { cache: "no-store" });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            const data = await res.json();
+
+            if (data && data.paid === true) {
+                shopOrderState.paid = true;
+                shopOrderState.txRef = data.txRef || "FT-VERIFIED";
+                shopOrderState.receivedAmount = Number(data.receivedAmount || shopOrderState.amount || 0);
+                shopOrderState.paidAt = data.paidAt || new Date().toLocaleString("vi-VN");
+                shopOrderState.lastErrorMsg = "";
+
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = `✅ Đã xác thực (#${shopOrderState.txRef})`;
+                }
+                renderShopInvoiceUI(true);
+
+                // Furina 3D real payment celebration
+                const bubble = document.getElementById("ag-furina-bubble");
+                if (bubble) {
+                    const amtStr = shopOrderState.receivedAmount > 0 ? shopOrderState.receivedAmount.toLocaleString("vi-VN") + "đ" : "Donate";
+                    bubble.textContent = `Oa!! Hệ thống TPBank vừa báo ting ting ${amtStr} từ mã ${shopOrderState.baseCode} rồi!! Cảm ơn nhà tài trợ siêu cấp đáng yêu của Silo nha~ 💧👑✨`;
+                    bubble.classList.add("show");
+                    furina3DState.bounceVel = 2500;
+                    furina3DState.spinTarget += Math.PI * 2;
+                    setTimeout(() => bubble.classList.remove("show"), 6500);
+                }
+            } else {
+                if (isManual) {
+                    shopOrderState.lastErrorMsg = (data && data.message)
+                        ? data.message
+                        : `Hệ thống TPBank chưa ghi nhận giao dịch có nội dung "${shopOrderState.baseCode}". Vui lòng quét mã QR và hoàn tất chuyển khoản trước!`;
+                    if (errBox) {
+                        errBox.style.display = "block";
+                        errBox.innerHTML = `
+                            <div style="font-weight:700;color:#fca5a5;margin-bottom:3px;">❌ Chưa tìm thấy giao dịch trên hệ thống TPBank!</div>
+                            <div style="color:#fecaca;line-height:1.45;">
+                                Hệ thống đối soát thực tế (<b>Silo n8n Cloud</b>) chưa ghi nhận khoản chuyển nào có nội dung <code>${shopOrderState.baseCode}</code>.<br>
+                                Vui lòng mở App Ngân hàng quét mã <b>VietQR</b> bên trái và chuyển khoản trước nhé! <i>(Hệ thống vẫn đang tự động quét ngầm mỗi 5 giây...)</i>
+                            </div>
+                        `;
+                    }
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = "🔍 Kiểm tra giao dịch ngay";
+                    }
+                    // Furina scolds playfully when clicking without transferring
+                    const bubble = document.getElementById("ag-furina-bubble");
+                    if (bubble) {
+                        bubble.textContent = `Ơ kìa~ Ngươi chưa chuyển khoản mã ${shopOrderState.baseCode} mà đã bấm xác nhận rồi hả?! Quét mã QR ủng hộ Silo thiệt đi rồi ta mới cảm ơn nha! 哼~ 💧😤`;
+                        bubble.classList.add("show");
+                        furina3DState.bounceVel = 1400;
+                        furina3DState.wiggleAmp = 0.25;
+                        setTimeout(() => bubble.classList.remove("show"), 5000);
+                    }
+                }
+            }
+        } catch (err) {
+            if (isManual) {
+                if (errBox) {
+                    errBox.style.display = "block";
+                    errBox.innerHTML = `⚠️ Không thể kết nối máy chủ đối soát (${err.message || "Lỗi mạng"}). Vui lòng thử lại sau giây lát!`;
+                }
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = "🔍 Kiểm tra giao dịch ngay";
+                }
+            }
+        } finally {
+            shopCheckingNow = false;
+        }
     }
 
     function getVietQrUrl(amount, memo) {
@@ -3190,14 +3310,36 @@ $JsContent = @'
         }
 
         const receiptBox = pane.querySelector("#ag-shop-receipt-box");
+        const errBox = pane.querySelector("#ag-shop-error-box");
         const statusDot = pane.querySelector("#ag-shop-status-dot");
         const statusText = pane.querySelector("#ag-shop-status-text");
-        if (receiptBox) receiptBox.style.display = shopOrderState.paid ? "block" : "none";
+        const confirmBtn = pane.querySelector("#ag-shop-confirm-paid");
+
+        if (receiptBox) {
+            if (shopOrderState.paid) {
+                receiptBox.style.display = "block";
+                const rxAmt = shopOrderState.receivedAmount > 0 ? shopOrderState.receivedAmount.toLocaleString("vi-VN") + " VNĐ" : "Đã xác nhận";
+                receiptBox.innerHTML = `
+                    🎉 <b>Biên lai xác thực giao dịch thành công! (Mã GD: <code>${shopOrderState.txRef}</code>)</b><br>
+                    Đã ghi nhận khoản chuyển <b>${rxAmt}</b> với nội dung <code>${shopOrderState.baseCode}</code> lúc ${shopOrderState.paidAt}. Cảm ơn bạn rất nhiều vì đã ủng hộ <b>Silo (Đỗ Trường Thịnh)</b>! 💧✨
+                `;
+            } else {
+                receiptBox.style.display = "none";
+            }
+        }
+        if (errBox && (shopOrderState.paid || !shopOrderState.lastErrorMsg)) {
+            errBox.style.display = "none";
+        }
+        if (confirmBtn && !shopCheckingNow) {
+            confirmBtn.textContent = shopOrderState.paid
+                ? `✅ Đã xác thực (#${shopOrderState.txRef})`
+                : "🔍 Kiểm tra giao dịch ngay";
+        }
         if (statusDot) statusDot.style.background = shopOrderState.paid ? "#38bdf8" : "#10b981";
         if (statusText) {
             statusText.innerHTML = shopOrderState.paid
-                ? `✨ <b>Đã ghi nhận giao dịch #${shopOrderState.orderId}!</b> Cảm ơn bạn đã ủng hộ Silo!`
-                : `Đang chờ thanh toán • Tự động quét VietQR 24/7`;
+                ? `✨ <b>Đã thanh toán thành công (#${shopOrderState.txRef})!</b> Xác thực bởi Silo n8n Cloud`
+                : `Đang chờ thanh toán • Tự động đối soát TPBank mỗi 5 giây`;
         }
     }
 
@@ -3206,9 +3348,9 @@ $JsContent = @'
         pane.id = "ag-settings-donate-pane";
         pane.innerHTML = `
             <div class="ag-mod-header">
-                <div class="ag-shop-badge">⚡ CỔNG THANH TOÁN TỰ ĐỘNG VIETQR NAPAS 247 • SILO SHOP</div>
+                <div class="ag-shop-badge">⚡ CỔNG THANH TOÁN TỰ ĐỘNG VIETQR NAPAS 247 • REAL-TIME WEBHOOK VERIFIED</div>
                 <h2>☕ Ủng Hộ Tác Giả / Donate Tùy Tâm (Silo)</h2>
-                <p>Hệ thống tạo mã QR & hóa đơn chuyển khoản tự động như Shop. Quét mã bằng bất kỳ ứng dụng Ngân hàng hoặc Ví điện tử nào — tự động điền chuẩn số tiền và nội dung chuyển khoản!</p>
+                <p>Hệ thống tạo mã QR & đối soát biến động số dư tự động qua <b>Silo n8n Cloud Gateway</b>. Tự động quét giao dịch thực tế mỗi 5 giây — chỉ xác nhận thành công khi ngân hàng ghi nhận chuyển khoản!</p>
             </div>
 
             <div class="ag-mod-section">
@@ -3298,7 +3440,7 @@ $JsContent = @'
                             <div class="ag-shop-status-bar">
                                 <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#d1fae5;">
                                     <span class="ag-pulse-dot" id="ag-shop-status-dot"></span>
-                                    <span id="ag-shop-status-text">Đang chờ thanh toán • Tự động quét VietQR 24/7</span>
+                                    <span id="ag-shop-status-text">Đang chờ thanh toán • Tự động đối soát TPBank mỗi 5 giây</span>
                                 </div>
                                 <div style="font-size:12px;font-weight:700;color:#fde047;font-variant-numeric:tabular-nums;">
                                     ⏱ <span id="ag-shop-timer-text">15:00</span>
@@ -3351,17 +3493,16 @@ $JsContent = @'
                             </div>
                         </div>
 
-                        <div id="ag-shop-receipt-box" style="display:none;background:linear-gradient(135deg,rgba(16,185,129,0.18),rgba(6,182,212,0.16));border:1px solid rgba(16,185,129,0.45);border-radius:10px;padding:10px 12px;font-size:12px;color:#ecfdf5;">
-                            🎉 <b>Biên lai xác nhận ủng hộ thành công!</b><br>
-                            Cảm ơn bạn rất nhiều vì đã tiếp thêm năng lượng cho <b>Silo (Đỗ Trường Thịnh)</b> phát triển thêm nhiều bản cập nhật mới! 💧✨
-                        </div>
+                        <div id="ag-shop-error-box" style="display:none;background:rgba(239,68,68,0.14);border:1px solid rgba(239,68,68,0.45);border-radius:10px;padding:10px 12px;font-size:12px;color:#fecaca;"></div>
+
+                        <div id="ag-shop-receipt-box" style="display:none;background:linear-gradient(135deg,rgba(16,185,129,0.18),rgba(6,182,212,0.16));border:1px solid rgba(16,185,129,0.45);border-radius:10px;padding:10px 12px;font-size:12px;color:#ecfdf5;"></div>
 
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:4px;">
                             <div style="font-size:11px;color:#94a3b8;line-height:1.35;">
-                                💡 Khi quét mã QR, <b>STK, Số tiền & Nội dung CK</b> đã được điền tự động.
+                                🔄 <b>Auto-Check 5s:</b> Tự động báo thành công ngay khi tiền vào TK (hoặc bấm kiểm tra thủ công).
                             </div>
                             <button type="button" class="ag-btn ag-btn-primary" id="ag-shop-confirm-paid" style="white-space:nowrap;background:linear-gradient(90deg,#10b981,#0284c7);">
-                                ✅ Đã chuyển khoản
+                                🔍 Kiểm tra giao dịch ngay
                             </button>
                         </div>
                     </div>
@@ -3400,7 +3541,7 @@ $JsContent = @'
         donorInp.oninput = () => {
             shopOrderState.donorName = donorInp.value;
             const clean = (donorInp.value || "").replace(/[^a-zA-Z0-9 ]/g, "").trim().toUpperCase().slice(0, 10);
-            const baseCode = shopOrderState.orderId.replace("ORD-", "SILO");
+            const baseCode = shopOrderState.baseCode || shopOrderState.orderId.replace("ORD-", "SILO");
             shopOrderState.memo = clean ? `${baseCode} ${clean}` : baseCode;
             renderShopInvoiceUI(true);
         };
@@ -3451,27 +3592,10 @@ $JsContent = @'
         bindCopy(pane.querySelector("#ag-copy-amt-btn"), () => String(shopOrderState.amount || ""));
         bindCopy(pane.querySelector("#ag-copy-memo-btn"), () => shopOrderState.memo);
 
-        // Confirm paid button (Shop verification simulation + Furina celebration)
+        // Real transaction check button (queries n8n Cloud + TPBank database)
         const confirmBtn = pane.querySelector("#ag-shop-confirm-paid");
         confirmBtn.onclick = () => {
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = "🔄 Đang đối soát giao dịch...";
-            setTimeout(() => {
-                shopOrderState.paid = true;
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = "✨ Đã xác nhận ủng hộ!";
-                renderShopInvoiceUI(true);
-
-                // Furina 3D celebration
-                const bubble = document.getElementById("ag-furina-bubble");
-                if (bubble) {
-                    bubble.textContent = `Oa!! Cảm ơn nhà tài trợ đã donate ủng hộ Silo (${shopOrderState.memo}) nha! Yêu bạn nhất trên đời~ 💧👑✨`;
-                    bubble.classList.add("show");
-                    furina3DState.bounceVel = 2400;
-                    furina3DState.spinTarget += Math.PI * 2;
-                    setTimeout(() => bubble.classList.remove("show"), 5500);
-                }
-            }, 1200);
+            verifyShopTransactionReal(true);
         };
 
         // Switch to Credit tab button
@@ -3847,6 +3971,9 @@ $JsContent = @'
         createUI();
         ensureFurinaCompanion();
         ensureSettingsModTab();
+        if (wasModTabActive) activateCustomSettingsTab("mod");
+        else if (wasDonateTabActive) activateCustomSettingsTab("donate");
+        else if (wasCreditTabActive) activateCustomSettingsTab("credit");
         applyConfig();
         translateDOM(currentLang);
         showPostUpdateToast();
@@ -3892,6 +4019,8 @@ $JsContent = @'
         window.__agModCleanup = () => {
             if (obs) obs.disconnect();
             if (blinkInterval) clearInterval(blinkInterval);
+            if (shopTimerInterval) clearInterval(shopTimerInterval);
+            if (shopPollInterval) clearInterval(shopPollInterval);
             if (furina3DState.rafId) cancelAnimationFrame(furina3DState.rafId);
             if (furina3DState.renderer) {
                 try { furina3DState.renderer.dispose(); } catch (e) {}
