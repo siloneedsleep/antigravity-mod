@@ -4,7 +4,7 @@
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.4.0";
+    const BUNDLED_BUILD_ID = "v3.5.0";
     if (!window.__agBootingCachedBundle) {
         try {
             const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
@@ -848,7 +848,161 @@
         "Researches questions across Notion sources and synthesizes cited briefs, comparisons, or reports. Use when answering requires discovering and reconciling workspace information, optionally with external research, and returning or saving the findings.": "Nghiên cứu câu hỏi từ các nguồn dữ liệu trong Notion và tổng hợp thành báo cáo, bảng so sánh hoặc bản tóm tắt có trích dẫn nguồn đầy đủ.",
         "A guided setup flow to get the most out of Notion that is recommended for all users who install the Notion MCP.": "Quy trình hướng dẫn thiết lập từng bước giúp khai thác tối đa sức mạnh của Notion sau khi cài đặt Notion MCP.",
         "Converts Notion product or technical specs into implementation plans, linked tasks, and evidence-based progress updates. Use for planning or implementing a spec, creating tasks from requirements, or reconciling implementation with spec changes.": "Chuyển đổi tài liệu đặc tả kỹ thuật hoặc sản phẩm trên Notion thành kế hoạch triển khai, danh sách công việc liên kết và cập nhật tiến độ thực tế.",
-        "Produces evidence-based weekly project or team updates by comparing reporting periods, tasks, decisions, and blockers in Notion. Use for recurring status digests; use spec-to-implementation for requirement-level implementation tracking.": "Tạo báo cáo tổng hợp tiến độ dự án hoặc đội nhóm hàng tuần dựa trên dữ liệu công việc, quyết định và các vướng mắc thực tế trong Notion."
+        "Produces evidence-based weekly project or team updates by comparing reporting periods, tasks, decisions, and blockers in Notion. Use for recurring status digests; use spec-to-implementation for requirement-level implementation tracking.": "Tạo báo cáo tổng hợp tiến độ dự án hoặc đội nhóm hàng tuần dựa trên dữ liệu công việc, quyết định và các vướng mắc thực tế trong Notion.",
+
+        // Hidden Menus, Popovers, Voice Mode, Slash Commands & Deep Settings
+        "No automations yet": "Chưa có tác vụ tự động hóa nào",
+        "Run a prompt on a schedule, like a morning summary of yesterday's changes. Runs show up here.": "Chạy câu lệnh tự động theo lịch trình, ví dụ: tóm tắt các thay đổi mỗi buổi sáng. Lịch sử chạy sẽ hiển thị tại đây.",
+        "Create with Prompt": "Tạo bằng câu lệnh AI",
+        "Creates a local automation that runs on this computer": "Tạo tác vụ tự động hóa cục bộ chạy trên máy tính này",
+        "Add automation": "Thêm tự động hóa",
+        "Refresh all credentials": "Làm mới mọi thông tin xác thực",
+        "Sidecar feature is not available.": "Tính năng tác vụ chạy kèm hiện không khả dụng.",
+        "Custom Order": "Thứ tự tùy chỉnh",
+        "Display": "Hiển thị",
+        "Auto Pin": "Tự động ghim",
+        "Archived Only": "Chỉ mục đã lưu trữ",
+        "Archived": "Đã lưu trữ",
+        "Scheduled": "Lịch hẹn",
+        "Mark All as Read": "Đánh dấu tất cả đã đọc",
+        "More options": "Tùy chọn khác",
+        "More actions": "Thao tác khác",
+        "More Actions": "Thao tác khác",
+        "Sidebar": "Thanh bên",
+        "Toggle sidebar": "Ẩn/Hiện thanh bên",
+        "Subtitles": "Phụ đề",
+        "Decorations": "Nhãn hiển thị",
+        "Environment": "Môi trường",
+        "This Computer": "Máy tính này",
+        "Remote": "Từ xa",
+        "Repo": "Kho mã (Repo)",
+        "Status": "Trạng thái",
+        "None": "Không",
+        "Worktree": "Nhánh (Worktree)",
+        "Workspace + Worktree": "Không gian + Worktree",
+        "Project + Worktree": "Dự án + Worktree",
+        "Copy Conversation Markdown": "Sao chép cuộc trò chuyện (Markdown)",
+        "Find in Conversation": "Tìm kiếm trong cuộc trò chuyện",
+        "Pin This Conversation": "Ghim cuộc trò chuyện này",
+        "Unpin This Conversation": "Bỏ ghim cuộc trò chuyện này",
+        "Mark This Conversation as Read": "Đánh dấu cuộc trò chuyện là đã đọc",
+        "Mark This Conversation as Unread": "Đánh dấu cuộc trò chuyện là chưa đọc",
+        "Rename This Conversation": "Đổi tên cuộc trò chuyện này",
+        "Move to New Group": "Chuyển sang nhóm mới",
+        "Remove from Group": "Xóa khỏi nhóm",
+        "Open Trajectory Debug View": "Mở chế độ gỡ lỗi luồng (Trajectory)",
+        "Copy Conversation ID": "Sao chép ID cuộc trò chuyện",
+        "Copy Trajectory ID": "Sao chép ID luồng thực thi",
+        "Open Project Picker": "Mở bộ chọn dự án",
+        "Code Search": "Tìm kiếm mã nguồn",
+        "Select category to search...": "Chọn danh mục để tìm kiếm...",
+        "Select Environment": "Chọn môi trường",
+        "Go to Home": "Về trang chủ",
+        "Importing shared conversation...": "Đang nhập cuộc trò chuyện được chia sẻ...",
+        "Add Context": "Thêm ngữ cảnh",
+        "Add context": "Thêm ngữ cảnh",
+        "Folder": "Thư mục",
+        "Mentions": "Gắn thẻ (@)",
+        "Actions": "Lệnh nhanh (/)",
+        "Browse": "Duyệt tìm",
+        "Browse rules": "Duyệt quy tắc (Rules)",
+        "Browse MCP resources": "Duyệt tài nguyên MCP",
+        "Attach terminal output": "Đính kèm đầu ra Terminal",
+        "Search Google Drive": "Tìm trên Google Drive",
+        "Docs, Sheets, Slides, and folders": "Docs, Sheets, Slides và thư mục",
+        "from CLI": "từ CLI",
+        "from IDE": "từ IDE",
+        "from Cider": "từ Cider",
+        "Ask a quick question without interrupting the main conversation.": "Đặt câu hỏi nhanh mà không làm gián đoạn cuộc trò chuyện chính.",
+        "Run until the specified goal is completely finished.": "Chạy liên tục cho đến khi hoàn thành trọn vẹn mục tiêu.",
+        "Compact the conversation now (summarize history to free up the context window).": "Nén cuộc trò chuyện ngay (tóm tắt lịch sử để giải phóng bộ nhớ ngữ cảnh).",
+        "Run an instruction on a recurring schedule or as a one-time timer.": "Chạy chỉ thị theo lịch định kỳ hoặc hẹn giờ một lần.",
+        "Invoke a browser agent for web tasks.": "Gọi tác nhân trình duyệt để xử lý các tác vụ trên web.",
+        "Plan carefully before executing a task.": "Lập kế hoạch chi tiết trước khi thực thi tác vụ.",
+        "Interview me to align on a plan.": "Phỏng vấn tôi để thống nhất phương án và kế hoạch thiết kế.",
+        "Invoke a team of agents to autonomously tackle large projects.": "Triệu tập đội ngũ đa tác nhân AI tự hành để giải quyết dự án lớn.",
+        "Reflect on recent successes or corrections to capture reusable skills or rules.": "Đúc kết từ các thành công hoặc chỉnh sửa gần đây để lưu thành kỹ năng/quy tắc.",
+        "Invoke the Boost multi-agent orchestrator for complex tasks.": "Kích hoạt bộ điều phối đa tác nhân Boost cho các tác vụ phức tạp.",
+        "GPT-OSS 120B (Medium)": "GPT-OSS 120B (Trung bình)",
+        "This Conversation": "Cuộc trò chuyện này",
+        "Only this conversation uses this preset.": "Chỉ cuộc trò chuyện này áp dụng chế độ quyền hạn này.",
+        "Use Global Settings": "Dùng cài đặt toàn cục",
+        "Your Remote setting": "Cài đặt Từ xa của bạn",
+        "Your This Computer setting": "Cài đặt Máy tính này của bạn",
+        "Click to copy URL": "Nhấp để sao chép URL",
+        "Browser Configuration Required": "Yêu cầu cấu hình trình duyệt",
+        "Waiting for your approval": "Đang chờ bạn phê duyệt",
+        "Conversation turns": "Các lượt hội thoại",
+        "Agent response": "Phản hồi của AI",
+        "User message": "Tin nhắn của bạn",
+        "Scroll to Bottom": "Cuộn xuống dưới cùng",
+        "Message input": "Ô nhập tin nhắn",
+        "Send message": "Gửi tin nhắn",
+        "Cancel (Ctrl+D)": "Hủy (Ctrl+D)",
+        "Close Review": "Đóng Xem xét",
+        "New tab": "Thẻ mới",
+        "Review header": "Thanh tiêu đề Xem xét",
+        "Toggle file diff": "Ẩn/Hiện so sánh thay đổi (Diff)",
+        "Typeahead menu": "Menu gợi ý nhanh",
+        "Add inline comment": "Thêm bình luận tại dòng này",
+        "Extensions": "Tiện ích mở rộng",
+        "Voice Mode": "Chế độ giọng nói",
+        "Start Voice mode": "Bật đàm thoại giọng nói",
+        "Record voice memo": "Ghi âm tin nhắn thoại",
+        "Stop recording": "Dừng ghi âm",
+        "The voice used in Voice mode. Powered by Gemini Live.": "Giọng đọc sử dụng trong chế độ đàm thoại. Hỗ trợ bởi Gemini Live.",
+        "The voice Jetski speaks with.": "Giọng đọc mà Antigravity sử dụng.",
+        "Voice engine": "Bộ máy giọng nói (Voice Engine)",
+        "Whatever the voice-engine-addr flag serves you.": "Sử dụng bộ máy giọng nói mặc định theo cờ hệ thống.",
+        "Default (Mendel)": "Mặc định (Mendel)",
+        "Custom…": "Tùy chỉnh…",
+        "Custom...": "Tùy chỉnh...",
+        "Type a voice variant name, such as rev27.": "Nhập tên biến thể giọng nói, ví dụ: rev27.",
+        "Voice engine address": "Địa chỉ bộ máy giọng nói",
+        "How loud Antigravity's voice is.": "Độ lớn âm lượng giọng nói của Antigravity.",
+        "Voice volume": "Âm lượng giọng nói",
+        "Save audio recordings": "Lưu bản ghi âm giọng nói",
+        "Only stored on your machine.": "Chỉ được lưu trữ cục bộ trên máy tính của bạn.",
+        "Mute Voice Mic": "Tắt tiếng Micro đàm thoại",
+        "Mute Voice Speaker": "Tắt tiếng Loa đàm thoại",
+        "Not set": "Chưa đặt",
+        "Change": "Thay đổi",
+        "Choose Antigravity's Voice": "Chọn giọng nói của Antigravity",
+        "Powered by Gemini Live ·": "Hỗ trợ bởi Gemini Live ·",
+        "Powered by Gemini Live": "Hỗ trợ bởi Gemini Live",
+        "You can change this in": "Bạn có thể đổi lại trong",
+        "later.": "sau.",
+        "Clear and friendly": "Rõ ràng và thân thiện",
+        "Confident and clear": "Tự tin và rõ ràng",
+        "Warm and engaging": "Ấm áp và cuốn hút",
+        "Warm and approachable": "Ấm áp và gần gũi",
+        "Deep and velvety": "Trầm ấm và mượt mà",
+        "Light and precise": "Nhẹ nhàng và chuẩn xác",
+        "Use": "Sử dụng",
+        "Previous voice": "Giọng trước đó",
+        "Next voice": "Giọng tiếp theo",
+        "Microphone blocked. Allow mic access.": "Micro bị chặn. Vui lòng cấp quyền truy cập Micro.",
+        "Couldn't connect": "Không thể kết nối",
+        "Disconnected": "Đã ngắt kết nối",
+        "Search shortcuts": "Tìm kiếm phím tắt",
+        "Show Remote Control QR code": "Hiện mã QR điều khiển từ xa",
+        "Remote Control link": "Liên kết điều khiển từ xa",
+        "Copy path": "Sao chép đường dẫn",
+        "Delete agent": "Xóa tác nhân",
+        "Delete plugin": "Xóa tiện ích",
+        "Edit project name": "Sửa tên dự án",
+        "Customizations views": "Chế độ xem Tùy chỉnh",
+        "The full developer experience.": "Trải nghiệm đầy đủ công cụ dành cho nhà phát triển.",
+        "Project 4K interface without developer tooling.": "Giao diện Project 4K tối giản, ẩn các công cụ lập trình.",
+        "Update Available": "Có bản cập nhật mới",
+        "Downloading Update": "Đang tải bản cập nhật",
+        "Install Update": "Cài đặt bản cập nhật",
+        "Installing Update": "Đang cài đặt cập nhật",
+        "Restart to Update": "Khởi động lại để cập nhật",
+        "tokens (": "token (",
+        "tokens)": "token)",
+        "Cut": "Cắt",
+        "Paste": "Dán"
     };
 
     const dictENtoVINorm = {};
@@ -920,6 +1074,37 @@
                 return `Cài đặt - ${sub}`;
             }
             if ((m = /^Manage (.+) app settings\.$/.exec(val))) return `Quản lý cài đặt ứng dụng ${m[1]}.`;
+            if ((m = /^Updated (.+)$/i.exec(val))) return `Cập nhật ${m[1]}`;
+            if ((m = /^Turn (\d+) of (\d+)$/i.exec(val))) return `Lượt ${m[1]} / ${m[2]}`;
+            if ((m = /^Load older messages, showing (\d+) of (\d+)$/i.exec(val))) return `Tải tin nhắn cũ hơn (đang hiện ${m[1]} / ${m[2]})`;
+            if ((m = /^Select model, current:\s*(.+)$/i.exec(val))) return `Chọn mô hình AI (hiện tại: ${m[1]})`;
+            if ((m = /^Agent permissions preset selector, current:\s*(.+)$/i.exec(val))) return `Chọn chế độ quyền hạn AI (hiện tại: ${dictENtoVI[m[1]] || m[1]})`;
+            if ((m = /^Agent permissions preset:\s*(.+)$/i.exec(val))) return `Chế độ quyền hạn AI: ${m[1]}`;
+            if ((m = /^(.+), voice (\d+) of (\d+)$/i.exec(val))) return `${m[1]}, giọng ${m[2]} / ${m[3]}`;
+            if ((m = /^(\d+)\s*tasks? running$/i.exec(val))) return `${m[1]} tác vụ đang chạy`;
+            if ((m = /^(\d+)\s*subagents? running$/i.exec(val))) return `${m[1]} tác nhân phụ đang chạy`;
+            if ((m = /^(\d+)\s*subagents\/tasks running$/i.exec(val))) return `${m[1]} tác nhân phụ/tác vụ đang chạy`;
+            if ((m = /^(\d+)\s*subagents? blocked$/i.exec(val))) return `${m[1]} tác nhân phụ đang chờ duyệt`;
+            if ((m = /^(\d+)\s*blocked$/i.exec(val))) return `${m[1]} đang chờ duyệt`;
+            if ((m = /^Close (.+)$/.exec(val))) return `Đóng ${dictENtoVI[m[1]] || m[1]}`;
+            if ((m = /^Subagents:\s*(.+)\s*tokens?$/i.exec(val))) return `Tác nhân phụ: ${m[1]} token`;
+            if ((m = /^Skills:\s*(.+)\s*tokens?$/i.exec(val))) return `Kỹ năng: ${m[1]} token`;
+            if ((m = /^Mcp Tools:\s*(.+)\s*tokens?$/i.exec(val))) return `Công cụ MCP: ${m[1]} token`;
+            if ((m = /^Rules:\s*(.+)\s*tokens?$/i.exec(val))) return `Quy tắc: ${m[1]} token`;
+            if ((m = /^([\d.,]+)\s*tokens?\s*\(([\d.,]+%)\)$/i.exec(val))) return `${m[1]} token (${m[2]})`;
+            if ((m = /^([\d.,]+)\s*tokens?$/i.exec(val))) return `${m[1]} token`;
+            if ((m = /^Add shortcut for (.+)$/.exec(val))) return `Thêm phím tắt cho ${dictENtoVI[m[1]] || m[1]}`;
+            if ((m = /^Remove shortcut (.+) for (.+)$/.exec(val))) return `Xóa phím tắt ${m[1]} của ${dictENtoVI[m[2]] || m[2]}`;
+            if ((m = /^Shortcut (.+) for (.+)$/.exec(val))) return `Phím tắt ${m[1]} cho ${dictENtoVI[m[2]] || m[2]}`;
+            if ((m = /^Toggle (.+)$/.exec(val))) return `Bật/tắt ${dictENtoVI[m[1]] || m[1]}`;
+            if ((m = /^No (.+) matching your search$/i.exec(val))) return `Không có ${dictENtoVI[m[1]] || m[1]} nào khớp tìm kiếm`;
+            if ((m = /^No (.+) match [“"](.+)[”"]\.$/i.exec(val))) return `Không có ${dictENtoVI[m[1]] || m[1]} nào khớp “${m[2]}”.`;
+            if ((m = /^No (.+) configured\.$/i.exec(val))) return `Chưa cấu hình ${dictENtoVI[m[1]] || m[1]} nào.`;
+            if ((m = /^No (.+) yet$/i.exec(val))) return `Chưa có ${m[1] === "automations" ? "tác vụ tự động hóa" : (dictENtoVI[m[1]] || m[1])} nào`;
+            if ((m = /^Add (.+)$/.exec(val))) return `Thêm ${m[1] === "automation" ? "tự động hóa" : (dictENtoVI[m[1]] || m[1])}`;
+            if ((m = /^System default \((.+)\)$/i.exec(val))) return `Mặc định hệ thống (${m[1]})`;
+            if ((m = /^This (.+) overrides your global permission settings\.$/i.exec(val))) return `Thiết lập này ghi đè cài đặt quyền hạn toàn cục của bạn.`;
+            if ((m = /^(.+) setting$/i.exec(val))) return `Cài đặt ${dictENtoVI[m[1]] || m[1]}`;
         } else {
             if (val === "Tùy chỉnh Mod") return "Customizations";
             if (dictVItoEN[val]) return dictVItoEN[val];
@@ -1516,6 +1701,45 @@
 
     function translateDOM(lang) {
         if (!document.body) return;
+
+        // First handle elements whose childNodes are multiple split text nodes (e.g. React JSX: "No ", "automations", " yet")
+        document.querySelectorAll("p, span, div, h1, h2, h3, label, button").forEach(el => {
+            if (el.childElementCount !== 0 || el.childNodes.length <= 1) return;
+            if (el.closest("#ag-settings-mod-pane, #ag-settings-donate-pane, #ag-settings-credit-pane, #ag-mod-quick-modal, #ag-furina-companion")) return;
+            const textNodes = [];
+            for (let i = 0; i < el.childNodes.length; i++) {
+                if (el.childNodes[i].nodeType === Node.TEXT_NODE) {
+                    textNodes.push(el.childNodes[i]);
+                }
+            }
+            if (textNodes.length <= 1) return;
+            if (lang === "EN" && el.__agMultiTranslated) {
+                textNodes.forEach(tn => {
+                    if (tn.__agOrigText !== undefined && tn.nodeValue === tn.__agTranslatedText) {
+                        tn.nodeValue = tn.__agOrigText;
+                    }
+                });
+                el.__agMultiTranslated = false;
+                return;
+            }
+            if (lang === "VI") {
+                const combined = textNodes.map(tn => tn.nodeValue).join("").trim();
+                if (!combined) return;
+                const tr = translateDynamicString(combined, "VI");
+                if (tr && tr !== combined) {
+                    textNodes.forEach((tn, idx) => {
+                        if (tn.__agOrigText === undefined || tn.nodeValue !== tn.__agTranslatedText) {
+                            tn.__agOrigText = tn.nodeValue;
+                        }
+                        const nextVal = idx === 0 ? tr : "";
+                        tn.__agTranslatedText = nextVal;
+                        tn.nodeValue = nextVal;
+                    });
+                    el.__agMultiTranslated = true;
+                }
+            }
+        });
+
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
         let node;
         while ((node = walker.nextNode())) {
@@ -1523,7 +1747,8 @@
             if (!p) continue;
             const tag = p.tagName;
             if (tag === "SCRIPT" || tag === "STYLE" || tag === "CODE" || tag === "PRE" || tag === "TEXTAREA") continue;
-            if (p.closest("#ag-settings-mod-pane") || p.closest("#ag-mod-quick-modal") || p.closest("#ag-furina-companion")) continue;
+            if (p.closest("#ag-settings-mod-pane, #ag-settings-donate-pane, #ag-settings-credit-pane, #ag-mod-quick-modal, #ag-furina-companion")) continue;
+            if (p.__agMultiTranslated) continue;
 
             const raw = node.nodeValue;
             const val = raw.trim();
@@ -1546,7 +1771,7 @@
         }
 
         document.querySelectorAll("[placeholder], [data-placeholder], [title], [aria-label]").forEach(el => {
-            if (el.closest("#ag-settings-mod-pane") || el.closest("#ag-mod-quick-modal") || el.closest("#ag-furina-companion")) return;
+            if (el.closest("#ag-settings-mod-pane, #ag-settings-donate-pane, #ag-settings-credit-pane, #ag-mod-quick-modal, #ag-furina-companion")) return;
             ["placeholder", "data-placeholder", "title", "aria-label"].forEach(attr => {
                 const cur = el.getAttribute(attr);
                 if (!cur) return;
@@ -2365,9 +2590,9 @@
         pane.id = "ag-settings-donate-pane";
         pane.innerHTML = `
             <div class="ag-mod-header">
-                <div class="ag-shop-badge">⚡ CỔNG THANH TOÁN TỰ ĐỘNG VIETQR NAPAS 247 • REAL-TIME WEBHOOK VERIFIED</div>
+                <div class="ag-shop-badge">⚡ CỔNG THANH TOÁN TỰ ĐỘNG VIETQR NAPAS 247 • XÁC THỰC SEPAY THỜI GIAN THỰC</div>
                 <h2>☕ Ủng Hộ Tác Giả / Donate Tùy Tâm (Silo)</h2>
-                <p>Hệ thống tạo mã QR & đối soát biến động số dư tự động qua <b>Silo n8n Cloud Gateway</b>. Tự động quét giao dịch thực tế mỗi 5 giây — chỉ xác nhận thành công khi ngân hàng ghi nhận chuyển khoản!</p>
+                <p>Hệ thống tạo mã QR & đối soát biến động số dư tự động qua <b>Silo n8n Cloud & SePay Gateway</b>. Tự động quét giao dịch thực tế mỗi 4 giây — chỉ xác nhận thành công khi ngân hàng ghi nhận chuyển khoản!</p>
             </div>
 
             <div class="ag-mod-section">
@@ -2516,7 +2741,7 @@
 
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:4px;">
                             <div style="font-size:11px;color:#94a3b8;line-height:1.35;">
-                                🔄 <b>Auto-Check 5s:</b> Tự động báo thành công ngay khi tiền vào TK (hoặc bấm kiểm tra thủ công).
+                                🔄 <b>Tự động quét (4s):</b> Tự động báo thành công ngay khi tiền vào TK (hoặc bấm kiểm tra thủ công).
                             </div>
                             <button type="button" class="ag-btn ag-btn-primary" id="ag-shop-confirm-paid" style="white-space:nowrap;background:linear-gradient(90deg,#10b981,#0284c7);">
                                 🔍 Kiểm tra giao dịch ngay
@@ -2619,7 +2844,7 @@
         pane.id = "ag-settings-credit-pane";
         pane.innerHTML = `
             <div class="ag-mod-header">
-                <div class="ag-shop-badge">👑 AUTHOR & PROJECT CREDITS • MIT LICENSE</div>
+                <div class="ag-shop-badge">👑 THÔNG TIN TÁC GIẢ & DỰ ÁN • GIẤY PHÉP MIT</div>
                 <h2>👑 Credit & Tác Giả — Silo</h2>
                 <p>Thông tin nhà phát triển, kiến trúc dự án Antigravity Mod và kênh ủng hộ chính thức.</p>
             </div>
@@ -2633,12 +2858,12 @@
                             <span style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);color:#7dd3fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;">@siloneedsleep</span>
                         </div>
                         <div style="font-size:13px;color:#cbd5e1;margin-bottom:8px;">
-                            Lead Creator & Maintainer — <b>Antigravity Mod (Vietnamese Localization & Furina 3D Companion)</b>
+                            Tác giả & Phát triển chính — <b>Antigravity Mod (Việt hóa toàn diện & Trợ lý 3D Furina)</b>
                         </div>
                         <div style="display:flex;flex-wrap:wrap;gap:8px;">
                             <a href="https://github.com/siloneedsleep" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🌐 GitHub: @siloneedsleep</a>
                             <a href="https://github.com/siloneedsleep/antigravity-mod" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">📦 Repo: antigravity-mod</a>
-                            <a href="https://github.com/siloneedsleep/portfolio" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🚀 Portfolio</a>
+                            <a href="https://github.com/siloneedsleep/portfolio" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🚀 Hồ sơ cá nhân</a>
                             <button type="button" class="ag-btn ag-btn-primary" id="ag-credit-open-donate" style="font-size:12px;padding:6px 14px;">☕ Mở Cổng Donate VietQR →</button>
                         </div>
                     </div>
@@ -2646,7 +2871,7 @@
             </div>
 
             <div class="ag-mod-section">
-                <div class="ag-mod-section-title">Các tính năng & Công nghệ cốt lõi (Developed by Silo)</div>
+                <div class="ag-mod-section-title">Các tính năng & Công nghệ cốt lõi (Phát triển bởi Silo)</div>
                 <div class="ag-credit-grid">
                     <div class="ag-credit-item">
                         <div style="font-weight:700;color:#38bdf8;margin-bottom:4px;font-size:13.5px;">🧊 3D Chibi Furina (Three.js WebGL)</div>

@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-11-05T07:59:30Z",
-    "version": "2.5.0",
-    "notes": "Tích hợp cổng thanh toán SePay Live (SP-LIVE-DT985996) bảo mật bằng SHA-256: Tự động khởi tạo đơn hàng SePay (mã PAY...) và đối soát trạng thái CAPTURED thời gian thực mỗi 4 giây"
+    "updatedAt": "2026-11-05T08:20:30Z",
+    "version": "2.6.0",
+    "notes": "Việt hóa 100% các menu ẩn, hộp thoại chọn Giọng nói (Voice Mode), menu lệnh gạch chéo (/), menu gắn thẻ (@), bộ lọc/sắp xếp nâng cao, phím tắt và chuỗi JSX đa node (No automations yet, Token Usage...)"
 }
