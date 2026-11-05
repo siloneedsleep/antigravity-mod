@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --ag-bg-url: url("https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920");
     --ag-bg-opacity: 0.16;
     --ag-pet-url: none;
@@ -226,14 +226,14 @@ textarea {
 
 #ag-lang-btn {
     position: fixed;
-    top: 42px;
-    right: 106px;
-    height: 26px;
+    top: 5px;
+    right: 145px;
+    height: 24px;
     z-index: 9998;
     background: transparent;
     color: var(--secondary-foreground, #a1a1aa);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 7px;
+    border-radius: 6px;
     padding: 0 8px;
     display: inline-flex;
     align-items: center;

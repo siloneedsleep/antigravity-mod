@@ -1,4 +1,4 @@
-/* AG_MOD_START */
+﻿/* AG_MOD_START */
 (function () {
     if (typeof window === "undefined" || !window.document) return;
     if (window.top && window.self && window.top !== window.self) return;

@@ -1,5 +1,5 @@
-{
-    "date":  "2026-11-05 13:11:30",
-    "message":  "fix(daemon): ensure DOM complete check before auto-inject on reload and preserve post-update toast",
-    "version":  "3.2.2"
+﻿{
+    "updatedAt":  "2026-11-05T06:43:55Z",
+    "version":  "2.2.1",
+    "notes":  "Chuyển nút chuyển đổi ngôn ngữ (VI/ENG) lên thanh điều hướng trên cùng (cạnh cụm nút cửa sổ) \u0026 giữ nguyên thanh Menu gốc của Antigravity"
 }

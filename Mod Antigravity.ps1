@@ -245,14 +245,14 @@ textarea {
 
 #ag-lang-btn {
     position: fixed;
-    top: 42px;
-    right: 106px;
-    height: 26px;
+    top: 5px;
+    right: 145px;
+    height: 24px;
     z-index: 9998;
     background: transparent;
     color: var(--secondary-foreground, #a1a1aa);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 7px;
+    border-radius: 6px;
     padding: 0 8px;
     display: inline-flex;
     align-items: center;
@@ -3195,89 +3195,21 @@ if (Test-Path $PortFile) {
     }
 }
 
-# 3. Patch vĩnh viễn vào app.asar (Antigravity 2.0)
+# 3. Đảm bảo resources\app.asar nguyên bản để giữ nguyên thanh điều hướng Electron (Auto-Injector Daemon đã đảm nhiệm nạp Mod tự động)
 $AsarFile = "$AppPath\resources\app.asar"
-if (Test-Path $AsarFile) {
-    if (-not (Test-Path "$AsarFile.bak")) {
-        Write-Host "[*] Dang tao ban sao luu app.asar.bak..." -ForegroundColor Yellow
-        Copy-Item $AsarFile "$AsarFile.bak" -Force
-    }
-
+if ((Test-Path "$AsarFile.bak") -and (Test-Path $AsarFile)) {
     try {
-        $AsarBytes = [System.IO.File]::ReadAllBytes("$AsarFile.bak")
-        $HeaderPayloadSize = [BitConverter]::ToInt32($AsarBytes, 12)
-        $HeaderJsonStr = [System.Text.Encoding]::UTF8.GetString($AsarBytes, 16, $HeaderPayloadSize)
-        $DataOffset = 16 + $HeaderPayloadSize
-        if ($DataOffset % 4 -ne 0) { $DataOffset += (4 - ($DataOffset % 4)) }
-
-        $HeaderObj = $HeaderJsonStr | ConvertFrom-Json
-        $PreloadMeta = $HeaderObj.files.dist.files.'preload.js'
-        $OrigOffset = [int64]$PreloadMeta.offset
-        $OrigSize = [int]$PreloadMeta.size
-        $OrigHash = $PreloadMeta.integrity.hash
-
-        $OrigPreloadStr = [System.Text.Encoding]::UTF8.GetString($AsarBytes, $DataOffset + $OrigOffset, $OrigSize)
-        $NewPreloadStr = $OrigPreloadStr + "`n" + $FullInjectJs
-        $NewPreloadBytes = [System.Text.Encoding]::UTF8.GetBytes($NewPreloadStr)
-        $NewSize = $NewPreloadBytes.Length
-
-        $Sha256 = [System.Security.Cryptography.SHA256]::Create()
-        $NewPreloadHash = ($Sha256.ComputeHash($NewPreloadBytes) | ForEach-Object { $_.ToString("x2") }) -join ""
-
-        $TotalPayloadLen = $AsarBytes.Length - $DataOffset
-        $NewOffsetStr = $TotalPayloadLen.ToString()
-
-        $OldPreloadPattern = '"preload\.js":\{"size":' + $OrigSize + ',"offset":"' + $OrigOffset + '","integrity":\{"algorithm":"SHA256","hash":"' + $OrigHash + '","blockSize":4194304,"blocks":\["' + $OrigHash + '"\]\}\}'
-        $NewPreloadEntry = '"preload.js":{"size":' + $NewSize + ',"offset":"' + $NewOffsetStr + '","integrity":{"algorithm":"SHA256","hash":"' + $NewPreloadHash + '","blockSize":4194304,"blocks":["' + $NewPreloadHash + '"]}}'
-
-        $NewHeaderJsonStr = [regex]::Replace($HeaderJsonStr, $OldPreloadPattern, $NewPreloadEntry)
-        $NewHeaderJsonBytes = [System.Text.Encoding]::UTF8.GetBytes($NewHeaderJsonStr)
-
-        $NewS3 = $NewHeaderJsonBytes.Length
-        $Padding = (4 - ($NewS3 % 4)) % 4
-        $NewS2 = $NewS3 + $Padding + 4
-        $NewS1 = $NewS2 + 4
-
-        $Ms = New-Object System.IO.MemoryStream
-        $Bw = New-Object System.IO.BinaryWriter($Ms)
-        $Bw.Write([int32]4)
-        $Bw.Write([int32]$NewS1)
-        $Bw.Write([int32]$NewS2)
-        $Bw.Write([int32]$NewS3)
-        $Bw.Write($NewHeaderJsonBytes)
-        if ($Padding -gt 0) {
-            $Bw.Write((New-Object byte[] $Padding))
-        }
-        $Bw.Write($AsarBytes, $DataOffset, $TotalPayloadLen)
-        $Bw.Write($NewPreloadBytes)
-        $Bw.Flush()
-        $NewAsarBytes = $Ms.ToArray()
-        $Ms.Close()
-
-        try {
-            [System.IO.File]::WriteAllBytes($AsarFile, $NewAsarBytes)
-            Write-Host "[+] Da cap nhat resources\app.asar thanh cong!" -ForegroundColor Green
-
-            $ExePath = "$AppPath\Antigravity.exe"
-            if (Test-Path $ExePath) {
-                if (-not (Test-Path "$ExePath.bak")) {
-                    Copy-Item $ExePath "$ExePath.bak" -Force -ErrorAction SilentlyContinue
-                }
-                $ExeBytes = [System.IO.File]::ReadAllBytes($ExePath)
-                $ExeAscii = [System.Text.Encoding]::ASCII.GetString($ExeBytes)
-                $FuseIdx = $ExeAscii.IndexOf("dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX")
-                if ($FuseIdx -ge 0) {
-                    $ExeBytes[$FuseIdx + 36] = 48
-                    [System.IO.File]::WriteAllBytes($ExePath, $ExeBytes)
-                }
-            }
-        } catch {
-            Write-Host "[+] Mod & Dich vu Auto-Loader da duoc cai dat vinh vien (tu dong kich hoat moi lan ban mo Antigravity)!" -ForegroundColor Green
+        $BakLen = (Get-Item "$AsarFile.bak").Length
+        $CurLen = (Get-Item $AsarFile).Length
+        if ($BakLen -ne $CurLen) {
+            Copy-Item "$AsarFile.bak" $AsarFile -Force -ErrorAction Stop
+            Write-Host "[+] Da khoi phuc resources\app.asar chuan (giu nguyen thanh Menu & nut dieu huong Electron)!" -ForegroundColor Green
         }
     } catch {
-        Write-Host "[!] Loi khi xu ly app.asar: $_" -ForegroundColor Red
+        # Bo qua neu file dang duoc su dung
     }
 }
+Write-Host "[+] Mod & Dich vu Auto-Loader da duoc cai dat vinh vien (tu dong kich hoat moi lan ban mo Antigravity)!" -ForegroundColor Green
 
 $DesktopDir = [Environment]::GetFolderPath("Desktop")
 $ShortcutPath = "$DesktopDir\Antigravity Modder.lnk"
