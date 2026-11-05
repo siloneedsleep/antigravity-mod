@@ -101,9 +101,10 @@ antigravity-mod/
 
 Dự án được thiết kế, phát triển và duy trì bởi **Silo (Đỗ Trường Thịnh)**:
 
-- **Tác giả (Creator & Maintainer)**: **Silo** — **Đỗ Trường Thịnh** ([@siloneedsleep](https://github.com/siloneedsleep))
+- **Tác giả (Creator & Maintainer)**: **Silo** — **Đỗ Trường Thịnh** ([@siloneedsleep](https://www.siloneedsleep.duckdns.org/))
+- **Trang cá nhân (Profile / Portfolio)**: [https://www.siloneedsleep.duckdns.org/](https://www.siloneedsleep.duckdns.org/)
+- **GitHub**: [https://github.com/siloneedsleep](https://github.com/siloneedsleep)
 - **Kho lưu trữ (GitHub Repo)**: [https://github.com/siloneedsleep/antigravity-mod](https://github.com/siloneedsleep/antigravity-mod)
-- **Portfolio**: [https://github.com/siloneedsleep/portfolio](https://github.com/siloneedsleep/portfolio)
 
 ---
 
@@ -124,4 +125,4 @@ Nếu bạn thấy bản Mod hữu ích, bạn có thể ủng hộ **Silo** tr�
 
 ## 📄 Giấy phép (License)
 
-Dự án được phân phối dưới giấy phép **[MIT License](./LICENSE)** — Copyright (c) 2026 **Silo — Đỗ Trường Thịnh ([@siloneedsleep](https://github.com/siloneedsleep))**.
+Dự án được phân phối dưới giấy phép **[MIT License](./LICENSE)** — Copyright (c) 2026 **Silo — Đỗ Trường Thịnh ([@siloneedsleep](https://www.siloneedsleep.duckdns.org/))**.

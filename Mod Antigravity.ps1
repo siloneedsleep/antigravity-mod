@@ -1032,7 +1032,7 @@ $JsContent = @'
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.5.0";
+    const BUNDLED_BUILD_ID = "v3.5.1";
     if (!window.__agBootingCachedBundle) {
         try {
             const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
@@ -3882,16 +3882,16 @@ $JsContent = @'
                     <div class="ag-credit-avatar">👑</div>
                     <div>
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                            <span style="font-size:20px;font-weight:800;color:#f8fafc;">Silo (Đỗ Trường Thịnh)</span>
-                            <span style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);color:#7dd3fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;">@siloneedsleep</span>
+                            <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="font-size:20px;font-weight:800;color:#f8fafc;text-decoration:none;">Silo (Đỗ Trường Thịnh)</a>
+                            <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);color:#7dd3fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;text-decoration:none;">@siloneedsleep</a>
                         </div>
                         <div style="font-size:13px;color:#cbd5e1;margin-bottom:8px;">
                             Tác giả & Phát triển chính — <b>Antigravity Mod (Việt hóa toàn diện & Trợ lý 3D Furina)</b>
                         </div>
                         <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                            <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🚀 Hồ sơ cá nhân (Profile)</a>
                             <a href="https://github.com/siloneedsleep" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🌐 GitHub: @siloneedsleep</a>
                             <a href="https://github.com/siloneedsleep/antigravity-mod" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">📦 Repo: antigravity-mod</a>
-                            <a href="https://github.com/siloneedsleep/portfolio" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🚀 Hồ sơ cá nhân</a>
                             <button type="button" class="ag-btn ag-btn-primary" id="ag-credit-open-donate" style="font-size:12px;padding:6px 14px;">☕ Mở Cổng Donate VietQR →</button>
                         </div>
                     </div>

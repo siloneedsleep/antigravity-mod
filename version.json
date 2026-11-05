@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-11-05T08:20:30Z",
-    "version": "2.6.0",
-    "notes": "Việt hóa 100% các menu ẩn, hộp thoại chọn Giọng nói (Voice Mode), menu lệnh gạch chéo (/), menu gắn thẻ (@), bộ lọc/sắp xếp nâng cao, phím tắt và chuỗi JSX đa node (No automations yet, Token Usage...)"
+    "updatedAt": "2026-11-05T12:06:30Z",
+    "version": "2.6.1",
+    "notes": "Cập nhật liên kết Hồ sơ cá nhân (Profile / Portfolio) của Silo sang https://www.siloneedsleep.duckdns.org/ trong phần Credit và README"
 }
