@@ -33,10 +33,11 @@ Bộ công cụ tùy biến giao diện (**UI Mod & Vietnamese Localization**) d
   - Toàn bộ các tab trong **Cài đặt (`Settings`)**: *Chung*, *Ứng dụng*, *Giao diện*, *Phím tắt*, *Thông báo*, *Mô hình AI & Mức dùng*, *Dự án* và hộp thoại *Gửi phản hồi*.
 - **Bảo toàn 100% văn bản gốc**: Lưu trữ văn bản tiếng Anh gốc trên từng DOM Text Node (`node.__agOrigText`), cho phép chuyển đổi qua lại giữa **Tiếng Việt (`VI`)** và **Tiếng Anh (`ENG`)** mượt mà kèm hiệu ứng chuyển cảnh mờ (`backdrop-filter: blur`).
 
-### 3. ⚙️ Tích hợp trực tiếp vào Cài đặt (`✨ Antigravity Mod`) & Phím tắt nhanh
-- **Mục riêng trong Cài đặt**: Tự động thêm tab `✨ Antigravity Mod` vào thanh bên của cửa sổ **Cài đặt (`Settings`)** gốc của Antigravity.
+### 3. ⚙️ Tích hợp trực tiếp vào Cài đặt (`✨ Antigravity Mod`, `☕ Donate`, `👑 Credit: Silo`) & Phím tắt nhanh
+- **Mục riêng trong Cài đặt**: Tự động thêm tab `✨ Antigravity Mod` cùng 2 mục `☕ Donate (VietQR)` và `👑 Credit: Silo` (nằm ngay phía trên mục *Gửi phản hồi*) vào thanh bên của cửa sổ **Cài đặt (`Settings`)** gốc của Antigravity.
+- **Cổng Thanh Toán / Donate Tự Động VietQR (Shop Style)**: Tích hợp ngay trong `Cài đặt -> ☕ Donate (VietQR)`, cho phép chọn các gói mệnh giá hoặc tự nhập số tiền tùy tâm, tự động sinh mã đơn hàng (`#ORD-xxxxxx`), nội dung chuyển khoản (`SILOxxxxxx`), đồng hồ đếm ngược 15 phút và mã **VietQR Napas 247** chuẩn xác.
 - **Menu mở nhanh (`Alt + M`)**: Bấm `Alt + M` ở bất kỳ đâu để bật/tắt nhanh bảng điều khiển Mod (hoặc nhấn `Esc` để đóng).
-- **Đổi ngôn ngữ nhanh (`Alt + L`)**: Bấm `Alt + L` hoặc nút `[VI / ENG]` trong suốt nằm cân đối trên thanh công cụ góc phải.
+- **Đổi ngôn ngữ nhanh (`Alt + L`)**: Bấm `Alt + L` hoặc nút `[VI / ENG]` trong suốt nằm cân đối trên thanh điều hướng trên cùng.
 - **Tùy chỉnh hình nền & màu chủ đạo**: Chọn nhanh các mẫu hình nền (*Rừng Đêm*, *Nhà Hát Fontaine*, *Cyberpunk Neon*, *Vũ Trụ Tinh Vân*, *Sương Mù Núi* hoặc URL bất kỳ), điều chỉnh thanh trượt độ mờ (`Opacity`) và bộ chọn màu viền chủ đạo (`Accent Color`).
 
 ---
@@ -96,6 +97,31 @@ antigravity-mod/
 
 ---
 
+## 👑 Credit & Tác giả (Author)
+
+Dự án được thiết kế, phát triển và duy trì bởi **Silo (Đỗ Trường Thịnh)**:
+
+- **Tác giả (Creator & Maintainer)**: **Silo** — **Đỗ Trường Thịnh** ([@siloneedsleep](https://github.com/siloneedsleep))
+- **Kho lưu trữ (GitHub Repo)**: [https://github.com/siloneedsleep/antigravity-mod](https://github.com/siloneedsleep/antigravity-mod)
+- **Portfolio**: [https://github.com/siloneedsleep/portfolio](https://github.com/siloneedsleep/portfolio)
+
+---
+
+## ☕ Ủng hộ tác giả / Donate (VietQR Napas 247)
+
+Nếu bạn thấy bản Mod hữu ích, bạn có thể ủng hộ **Silo** trực tiếp ngay trong mục **`Cài đặt (Settings) -> ☕ Donate (VietQR)`** của ứng dụng (hệ thống tạo đơn & mã QR tự động như Shop, tùy tâm chọn mệnh giá hoặc tự nhập số tiền), hoặc quét mã **VietQR** dưới đây:
+
+- **Ngân hàng**: **TPBank (Ngân hàng TMCP Tiên Phong)**
+- **Số tài khoản (STK)**: `74486568888`
+- **Chủ tài khoản**: `DO TRUONG THINH`
+- **Nội dung chuyển khoản**: `SILO DONATE`
+
+<p align="center">
+  <img src="https://img.vietqr.io/image/TPB-74486568888-compact2.png?addInfo=SILO%20DONATE&accountName=DO%20TRUONG%20THINH" alt="VietQR Donate Silo - DO TRUONG THINH" width="260" />
+</p>
+
+---
+
 ## 📄 Giấy phép (License)
 
-Dự án được phân phối dưới giấy phép **[MIT License](./LICENSE)** — Copyright (c) 2026 **Đỗ Trường Thịnh ([@siloneedsleep](https://github.com/siloneedsleep))**.
+Dự án được phân phối dưới giấy phép **[MIT License](./LICENSE)** — Copyright (c) 2026 **Silo — Đỗ Trường Thịnh ([@siloneedsleep](https://github.com/siloneedsleep))**.

@@ -2069,6 +2069,496 @@
         }, 700);
     }
 
+    let shopTimerInterval = null;
+    let shopOrderState = {
+        orderId: "",
+        memo: "",
+        amount: 50000,
+        tierLabel: "🍜 Phở bò đặc biệt",
+        donorName: "",
+        createdAt: "",
+        remainingSec: 900,
+        paid: false
+    };
+
+    function generateShopOrder(amount, tierLabel, keepAmountInput) {
+        const rand6 = Math.floor(100000 + Math.random() * 900000);
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} - ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+        const donorClean = (shopOrderState.donorName || "").replace(/[^a-zA-Z0-9 ]/g, "").trim().toUpperCase().slice(0, 10);
+        const memo = donorClean ? `SILO${rand6} ${donorClean}` : `SILO${rand6}`;
+
+        shopOrderState.orderId = `ORD-${rand6}`;
+        shopOrderState.memo = memo;
+        shopOrderState.amount = Math.max(0, parseInt(amount, 10) || 0);
+        if (tierLabel) shopOrderState.tierLabel = tierLabel;
+        shopOrderState.createdAt = timeStr;
+        shopOrderState.remainingSec = 900;
+        shopOrderState.paid = false;
+
+        renderShopInvoiceUI(keepAmountInput);
+        startShopCountdown();
+    }
+
+    function startShopCountdown() {
+        if (shopTimerInterval) clearInterval(shopTimerInterval);
+        shopTimerInterval = setInterval(() => {
+            const pane = document.getElementById("ag-settings-donate-pane");
+            if (!pane || shopOrderState.paid) return;
+            if (shopOrderState.remainingSec > 0) {
+                shopOrderState.remainingSec--;
+            } else {
+                generateShopOrder(shopOrderState.amount, shopOrderState.tierLabel, true);
+                return;
+            }
+            const m = String(Math.floor(shopOrderState.remainingSec / 60)).padStart(2, "0");
+            const s = String(shopOrderState.remainingSec % 60).padStart(2, "0");
+            const tEl = pane.querySelector("#ag-shop-timer-text");
+            const fEl = pane.querySelector("#ag-shop-timer-fill");
+            if (tEl) tEl.textContent = `${m}:${s}`;
+            if (fEl) fEl.style.width = `${Math.max(2, (shopOrderState.remainingSec / 900) * 100)}%`;
+        }, 1000);
+    }
+
+    function getVietQrUrl(amount, memo) {
+        const base = "https://img.vietqr.io/image/TPB-74486568888-compact2.png";
+        const params = [];
+        if (amount && amount > 0) params.push("amount=" + encodeURIComponent(amount));
+        params.push("addInfo=" + encodeURIComponent(memo || "SILO DONATE"));
+        params.push("accountName=" + encodeURIComponent("DO TRUONG THINH"));
+        return base + "?" + params.join("&");
+    }
+
+    function renderShopInvoiceUI(keepAmountInput) {
+        const pane = document.getElementById("ag-settings-donate-pane");
+        if (!pane) return;
+
+        const amt = shopOrderState.amount;
+        const qrUrl = getVietQrUrl(amt, shopOrderState.memo);
+        const qrImg = pane.querySelector("#ag-shop-qr-img");
+        const qrLink = pane.querySelector("#ag-shop-qr-download");
+        if (qrImg && qrImg.getAttribute("data-src") !== qrUrl) {
+            qrImg.style.opacity = "0.4";
+            qrImg.src = qrUrl;
+            qrImg.setAttribute("data-src", qrUrl);
+            qrImg.onload = () => { qrImg.style.opacity = "1"; };
+        }
+        if (qrLink) qrLink.href = qrUrl;
+
+        const setTxt = (sel, val) => {
+            const el = pane.querySelector(sel);
+            if (el) el.textContent = val;
+        };
+        setTxt("#ag-shop-order-id", "#" + shopOrderState.orderId);
+        setTxt("#ag-shop-order-time", shopOrderState.createdAt);
+        setTxt("#ag-shop-tier-badge", shopOrderState.tierLabel);
+        setTxt("#ag-shop-amount-display", amt > 0 ? amt.toLocaleString("vi-VN") + " VNĐ" : "Tùy tâm (Nhập trên App)");
+        setTxt("#ag-shop-memo-display", shopOrderState.memo);
+
+        if (!keepAmountInput) {
+            const customInp = pane.querySelector("#ag-shop-custom-amount");
+            if (customInp) customInp.value = amt > 0 ? String(amt) : "";
+        }
+
+        const receiptBox = pane.querySelector("#ag-shop-receipt-box");
+        const statusDot = pane.querySelector("#ag-shop-status-dot");
+        const statusText = pane.querySelector("#ag-shop-status-text");
+        if (receiptBox) receiptBox.style.display = shopOrderState.paid ? "block" : "none";
+        if (statusDot) statusDot.style.background = shopOrderState.paid ? "#38bdf8" : "#10b981";
+        if (statusText) {
+            statusText.innerHTML = shopOrderState.paid
+                ? `✨ <b>Đã ghi nhận giao dịch #${shopOrderState.orderId}!</b> Cảm ơn bạn đã ủng hộ Silo!`
+                : `Đang chờ thanh toán • Tự động quét VietQR 24/7`;
+        }
+    }
+
+    function buildSettingsDonatePane() {
+        const pane = document.createElement("div");
+        pane.id = "ag-settings-donate-pane";
+        pane.innerHTML = `
+            <div class="ag-mod-header">
+                <div class="ag-shop-badge">⚡ CỔNG THANH TOÁN TỰ ĐỘNG VIETQR NAPAS 247 • SILO SHOP</div>
+                <h2>☕ Ủng Hộ Tác Giả / Donate Tùy Tâm (Silo)</h2>
+                <p>Hệ thống tạo mã QR & hóa đơn chuyển khoản tự động như Shop. Quét mã bằng bất kỳ ứng dụng Ngân hàng hoặc Ví điện tử nào — tự động điền chuẩn số tiền và nội dung chuyển khoản!</p>
+            </div>
+
+            <div class="ag-mod-section">
+                <div class="ag-mod-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+                    <span>1. Chọn Gói Donate (Tùy Tâm) hoặc Tự Nhập Mệnh Giá</span>
+                    <button type="button" class="ag-btn ag-btn-ghost" id="ag-goto-credit-btn" style="padding:4px 10px;font-size:11.5px;">👑 Xem Credit: Silo →</button>
+                </div>
+                <div class="ag-mod-card">
+                    <div class="ag-donate-tiers" id="ag-donate-tier-grid">
+                        <div class="ag-donate-tier" data-amt="10000" data-label="🧋 Trà đá vỉa hè">
+                            <span class="ag-tier-price">10.000đ</span>
+                            <span class="ag-tier-name">🧋 Trà đá vỉa hè</span>
+                        </div>
+                        <div class="ag-donate-tier" data-amt="20000" data-label="☕ Cà phê sữa đá">
+                            <span class="ag-tier-price">20.000đ</span>
+                            <span class="ag-tier-name">☕ Cà phê sữa đá</span>
+                        </div>
+                        <div class="ag-donate-tier active" data-amt="50000" data-label="🍜 Phở bò đặc biệt">
+                            <span class="ag-tier-tag">🔥 PHỔ BIẾN</span>
+                            <span class="ag-tier-price">50.000đ</span>
+                            <span class="ag-tier-name">🍜 Phở bò đặc biệt</span>
+                        </div>
+                        <div class="ag-donate-tier" data-amt="100000" data-label="🍕 Combo Pizza đêm">
+                            <span class="ag-tier-price">100.000đ</span>
+                            <span class="ag-tier-name">🍕 Combo Pizza đêm</span>
+                        </div>
+                        <div class="ag-donate-tier" data-amt="200000" data-label="💎 Nhà tài trợ Vàng">
+                            <span class="ag-tier-tag" style="background:linear-gradient(90deg,#3b82f6,#8b5cf6);">💎 VIP</span>
+                            <span class="ag-tier-price">200.000đ</span>
+                            <span class="ag-tier-name">💎 Nhà tài trợ Vàng</span>
+                        </div>
+                        <div class="ag-donate-tier" data-amt="0" data-label="💖 Tùy tâm (Nhập trên App)">
+                            <span class="ag-tier-tag" style="background:linear-gradient(90deg,#10b981,#059669);">TÙY TÂM</span>
+                            <span class="ag-tier-price">Tùy tâm</span>
+                            <span class="ag-tier-name">💖 Tự nhập tiền khi quét</span>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;align-items:end;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">
+                        <div class="ag-mod-row-col">
+                            <div class="ag-mod-label">Hoặc nhập số tiền tùy chỉnh (VNĐ)</div>
+                            <input type="number" class="ag-mod-input" id="ag-shop-custom-amount" placeholder="VD: 35000, 88888... (Để trống = Tùy tâm)" min="0" step="1000" value="50000">
+                        </div>
+                        <div class="ag-mod-row-col">
+                            <div class="ag-mod-label">Tên / Biệt danh của bạn (Tùy chọn)</div>
+                            <input type="text" class="ag-mod-input" id="ag-shop-donor-name" placeholder="VD: AnhBa, FanFurina..." maxlength="12">
+                        </div>
+                        <button type="button" class="ag-btn ag-btn-primary" id="ag-shop-new-order-btn" style="height:36px;">🧾 Tạo mã QR mới</button>
+                    </div>
+
+                    <div class="ag-chips" style="margin-top:-4px;">
+                        <span class="ag-chip" data-add-amt="10000">+10.000đ</span>
+                        <span class="ag-chip" data-add-amt="20000">+20.000đ</span>
+                        <span class="ag-chip" data-add-amt="50000">+50.000đ</span>
+                        <span class="ag-chip" data-add-amt="100000">+100.000đ</span>
+                        <span class="ag-chip" data-set-amt="500000">👑 500.000đ (SSR)</span>
+                        <span class="ag-chip" data-set-amt="0">💖 Đổi sang Tùy tâm (0đ)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ag-mod-section">
+                <div class="ag-mod-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+                    <span>2. Hóa Đơn Điện Tử & Quét Mã VietQR Tự Động</span>
+                    <span id="ag-shop-tier-badge" style="font-size:11.5px;color:#7dd3fc;font-weight:600;">🍜 Phở bò đặc biệt</span>
+                </div>
+                <div class="ag-shop-checkout">
+                    <div class="ag-shop-qr-card">
+                        <div style="font-size:11.5px;font-weight:700;color:#bae6fd;letter-spacing:0.4px;display:flex;align-items:center;gap:6px;">
+                            <span>📱 QUÉT MÃ VIETQR NAPAS 247</span>
+                        </div>
+                        <div class="ag-qr-frame">
+                            <div class="ag-qr-laser"></div>
+                            <img id="ag-shop-qr-img" alt="VietQR DO TRUONG THINH" src="https://img.vietqr.io/image/TPB-74486568888-compact2.png?amount=50000&addInfo=SILO888888&accountName=DO%20TRUONG%20THINH" style="transition:opacity 0.2s ease;">
+                        </div>
+                        <div style="font-size:11px;color:#94a3b8;text-align:center;line-height:1.35;">
+                            Hỗ trợ tất cả App Ngân hàng, MoMo, ZaloPay, Viettel Money
+                        </div>
+                        <div style="display:flex;gap:8px;width:100%;">
+                            <a id="ag-shop-qr-download" href="https://img.vietqr.io/image/TPB-74486568888-compact2.png?amount=50000&addInfo=SILO888888&accountName=DO%20TRUONG%20THINH" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="flex:1;text-align:center;text-decoration:none;font-size:11.5px;padding:6px 8px;">🔍 Phóng to QR</a>
+                            <button type="button" class="ag-btn ag-btn-ghost" id="ag-shop-refresh-qr" style="font-size:11.5px;padding:6px 10px;">🔄 Đổi mã</button>
+                        </div>
+                    </div>
+
+                    <div class="ag-shop-invoice">
+                        <div>
+                            <div class="ag-shop-status-bar">
+                                <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#d1fae5;">
+                                    <span class="ag-pulse-dot" id="ag-shop-status-dot"></span>
+                                    <span id="ag-shop-status-text">Đang chờ thanh toán • Tự động quét VietQR 24/7</span>
+                                </div>
+                                <div style="font-size:12px;font-weight:700;color:#fde047;font-variant-numeric:tabular-nums;">
+                                    ⏱ <span id="ag-shop-timer-text">15:00</span>
+                                </div>
+                            </div>
+                            <div class="ag-shop-timer-progress" style="margin-top:6px;">
+                                <div class="ag-shop-timer-fill" id="ag-shop-timer-fill"></div>
+                            </div>
+                        </div>
+
+                        <div class="ag-invoice-table">
+                            <div class="ag-invoice-row">
+                                <span class="ag-invoice-label">Mã đơn / Thời gian</span>
+                                <span class="ag-invoice-val">
+                                    <code id="ag-shop-order-id" style="color:#7dd3fc;">#ORD-888888</code>
+                                    <span style="color:#64748b;font-weight:400;font-size:11px;" id="ag-shop-order-time">--:--:--</span>
+                                </span>
+                            </div>
+                            <div class="ag-invoice-row">
+                                <span class="ag-invoice-label">Ngân hàng thụ hưởng</span>
+                                <span class="ag-invoice-val" style="color:#c084fc;">🟣 TPBank (Tiên Phong Bank)</span>
+                            </div>
+                            <div class="ag-invoice-row">
+                                <span class="ag-invoice-label">Chủ tài khoản</span>
+                                <span class="ag-invoice-val">
+                                    <span>DO TRUONG THINH</span>
+                                    <button type="button" class="ag-copy-mini" data-copy="DO TRUONG THINH">📋 Sao chép</button>
+                                </span>
+                            </div>
+                            <div class="ag-invoice-row">
+                                <span class="ag-invoice-label">Số tài khoản (STK)</span>
+                                <span class="ag-invoice-val">
+                                    <code style="font-size:13.5px;color:#38bdf8;letter-spacing:0.5px;">74486568888</code>
+                                    <button type="button" class="ag-copy-mini" data-copy="74486568888">📋 Sao chép</button>
+                                </span>
+                            </div>
+                            <div class="ag-invoice-row">
+                                <span class="ag-invoice-label">Số tiền thanh toán</span>
+                                <span class="ag-invoice-val">
+                                    <span id="ag-shop-amount-display" style="color:#4ade80;font-size:13.5px;">50.000 VNĐ</span>
+                                    <button type="button" class="ag-copy-mini" id="ag-copy-amt-btn">📋 Sao chép</button>
+                                </span>
+                            </div>
+                            <div class="ag-invoice-row" style="background:rgba(245,158,11,0.09);border-color:rgba(245,158,11,0.3);">
+                                <span class="ag-invoice-label" style="color:#fde68a;font-weight:600;">Nội dung chuyển khoản</span>
+                                <span class="ag-invoice-val">
+                                    <code id="ag-shop-memo-display" style="font-size:13.5px;color:#fde047;letter-spacing:0.6px;">SILO888888</code>
+                                    <button type="button" class="ag-copy-mini" id="ag-copy-memo-btn" style="background:rgba(245,158,11,0.22);border-color:rgba(245,158,11,0.45);color:#fef08a;">📋 Sao chép</button>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div id="ag-shop-receipt-box" style="display:none;background:linear-gradient(135deg,rgba(16,185,129,0.18),rgba(6,182,212,0.16));border:1px solid rgba(16,185,129,0.45);border-radius:10px;padding:10px 12px;font-size:12px;color:#ecfdf5;">
+                            🎉 <b>Biên lai xác nhận ủng hộ thành công!</b><br>
+                            Cảm ơn bạn rất nhiều vì đã tiếp thêm năng lượng cho <b>Silo (Đỗ Trường Thịnh)</b> phát triển thêm nhiều bản cập nhật mới! 💧✨
+                        </div>
+
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:4px;">
+                            <div style="font-size:11px;color:#94a3b8;line-height:1.35;">
+                                💡 Khi quét mã QR, <b>STK, Số tiền & Nội dung CK</b> đã được điền tự động.
+                            </div>
+                            <button type="button" class="ag-btn ag-btn-primary" id="ag-shop-confirm-paid" style="white-space:nowrap;background:linear-gradient(90deg,#10b981,#0284c7);">
+                                ✅ Đã chuyển khoản
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Tier click handlers
+        const tiers = pane.querySelectorAll(".ag-donate-tier");
+        tiers.forEach(t => {
+            t.onclick = () => {
+                tiers.forEach(x => x.classList.remove("active"));
+                t.classList.add("active");
+                const amt = parseInt(t.getAttribute("data-amt"), 10) || 0;
+                const lbl = t.getAttribute("data-label") || "💖 Ủng hộ tùy tâm";
+                shopOrderState.amount = amt;
+                shopOrderState.tierLabel = lbl;
+                const customInp = pane.querySelector("#ag-shop-custom-amount");
+                if (customInp) customInp.value = amt > 0 ? String(amt) : "";
+                renderShopInvoiceUI(true);
+            };
+        });
+
+        // Custom amount input live update
+        const customInp = pane.querySelector("#ag-shop-custom-amount");
+        customInp.oninput = () => {
+            tiers.forEach(x => x.classList.remove("active"));
+            const val = Math.max(0, parseInt(customInp.value, 10) || 0);
+            shopOrderState.amount = val;
+            shopOrderState.tierLabel = val > 0 ? "💎 Mệnh giá tùy chỉnh" : "💖 Tùy tâm (Nhập trên App)";
+            renderShopInvoiceUI(true);
+        };
+
+        // Donor name input live update
+        const donorInp = pane.querySelector("#ag-shop-donor-name");
+        donorInp.oninput = () => {
+            shopOrderState.donorName = donorInp.value;
+            const clean = (donorInp.value || "").replace(/[^a-zA-Z0-9 ]/g, "").trim().toUpperCase().slice(0, 10);
+            const baseCode = shopOrderState.orderId.replace("ORD-", "SILO");
+            shopOrderState.memo = clean ? `${baseCode} ${clean}` : baseCode;
+            renderShopInvoiceUI(true);
+        };
+
+        // Quick +amount chips
+        pane.querySelectorAll("[data-add-amt]").forEach(chip => {
+            chip.onclick = () => {
+                const add = parseInt(chip.getAttribute("data-add-amt"), 10) || 0;
+                const next = (shopOrderState.amount || 0) + add;
+                shopOrderState.amount = next;
+                shopOrderState.tierLabel = "💎 Mệnh giá tùy chỉnh";
+                tiers.forEach(x => x.classList.remove("active"));
+                renderShopInvoiceUI(false);
+            };
+        });
+        pane.querySelectorAll("[data-set-amt]").forEach(chip => {
+            chip.onclick = () => {
+                const val = parseInt(chip.getAttribute("data-set-amt"), 10) || 0;
+                shopOrderState.amount = val;
+                shopOrderState.tierLabel = val >= 500000 ? "👑 Đại gia chống lưng (SSR)" : "💖 Tùy tâm (Nhập trên App)";
+                tiers.forEach(x => x.classList.remove("active"));
+                renderShopInvoiceUI(false);
+            };
+        });
+
+        // New order / refresh buttons
+        pane.querySelector("#ag-shop-new-order-btn").onclick = () => {
+            generateShopOrder(shopOrderState.amount, shopOrderState.tierLabel, true);
+        };
+        pane.querySelector("#ag-shop-refresh-qr").onclick = () => {
+            generateShopOrder(shopOrderState.amount, shopOrderState.tierLabel, true);
+        };
+
+        // Copy buttons
+        const bindCopy = (btn, getText) => {
+            if (!btn) return;
+            btn.onclick = () => {
+                const txt = getText();
+                navigator.clipboard?.writeText(txt);
+                const old = btn.textContent;
+                btn.textContent = "✓ Đã chép";
+                setTimeout(() => { btn.textContent = old; }, 1400);
+            };
+        };
+        pane.querySelectorAll("[data-copy]").forEach(btn => {
+            bindCopy(btn, () => btn.getAttribute("data-copy"));
+        });
+        bindCopy(pane.querySelector("#ag-copy-amt-btn"), () => String(shopOrderState.amount || ""));
+        bindCopy(pane.querySelector("#ag-copy-memo-btn"), () => shopOrderState.memo);
+
+        // Confirm paid button (Shop verification simulation + Furina celebration)
+        const confirmBtn = pane.querySelector("#ag-shop-confirm-paid");
+        confirmBtn.onclick = () => {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = "🔄 Đang đối soát giao dịch...";
+            setTimeout(() => {
+                shopOrderState.paid = true;
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = "✨ Đã xác nhận ủng hộ!";
+                renderShopInvoiceUI(true);
+
+                // Furina 3D celebration
+                const bubble = document.getElementById("ag-furina-bubble");
+                if (bubble) {
+                    bubble.textContent = `Oa!! Cảm ơn nhà tài trợ đã donate ủng hộ Silo (${shopOrderState.memo}) nha! Yêu bạn nhất trên đời~ 💧👑✨`;
+                    bubble.classList.add("show");
+                    furina3DState.bounceVel = 2400;
+                    furina3DState.spinTarget += Math.PI * 2;
+                    setTimeout(() => bubble.classList.remove("show"), 5500);
+                }
+            }, 1200);
+        };
+
+        // Switch to Credit tab button
+        pane.querySelector("#ag-goto-credit-btn").onclick = () => {
+            activateCustomSettingsTab("credit");
+        };
+
+        return pane;
+    }
+
+    function buildSettingsCreditPane() {
+        const pane = document.createElement("div");
+        pane.id = "ag-settings-credit-pane";
+        pane.innerHTML = `
+            <div class="ag-mod-header">
+                <div class="ag-shop-badge">👑 AUTHOR & PROJECT CREDITS • MIT LICENSE</div>
+                <h2>👑 Credit & Tác Giả — Silo</h2>
+                <p>Thông tin nhà phát triển, kiến trúc dự án Antigravity Mod và kênh ủng hộ chính thức.</p>
+            </div>
+
+            <div class="ag-credit-hero">
+                <div style="display:flex;align-items:center;gap:18px;">
+                    <div class="ag-credit-avatar">👑</div>
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <span style="font-size:20px;font-weight:800;color:#f8fafc;">Silo (Đỗ Trường Thịnh)</span>
+                            <span style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);color:#7dd3fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;">@siloneedsleep</span>
+                        </div>
+                        <div style="font-size:13px;color:#cbd5e1;margin-bottom:8px;">
+                            Lead Creator & Maintainer — <b>Antigravity Mod (Vietnamese Localization & Furina 3D Companion)</b>
+                        </div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                            <a href="https://github.com/siloneedsleep" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🌐 GitHub: @siloneedsleep</a>
+                            <a href="https://github.com/siloneedsleep/antigravity-mod" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">📦 Repo: antigravity-mod</a>
+                            <a href="https://github.com/siloneedsleep/portfolio" target="_blank" rel="noopener noreferrer" class="ag-btn ag-btn-ghost" style="text-decoration:none;font-size:12px;padding:6px 12px;">🚀 Portfolio</a>
+                            <button type="button" class="ag-btn ag-btn-primary" id="ag-credit-open-donate" style="font-size:12px;padding:6px 14px;">☕ Mở Cổng Donate VietQR →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ag-mod-section">
+                <div class="ag-mod-section-title">Các tính năng & Công nghệ cốt lõi (Developed by Silo)</div>
+                <div class="ag-credit-grid">
+                    <div class="ag-credit-item">
+                        <div style="font-weight:700;color:#38bdf8;margin-bottom:4px;font-size:13.5px;">🧊 3D Chibi Furina (Three.js WebGL)</div>
+                        <div style="font-size:12px;color:#94a3b8;line-height:1.45;">
+                            Render trực tiếp mô hình <code>furi.fbx</code> 60FPS với hiệu ứng nghiêng đầu, đảo mắt theo con trỏ chữ (Caret Tracking), nhún nhảy khi gõ phím & xoay 360° ăn mừng.
+                        </div>
+                    </div>
+                    <div class="ag-credit-item">
+                        <div style="font-weight:700;color:#4ade80;margin-bottom:4px;font-size:13.5px;">🇻🇳 Việt Hóa Toàn Diện (100% UI)</div>
+                        <div style="font-size:12px;color:#94a3b8;line-height:1.45;">
+                            Hệ thống <code>TreeWalker</code> + <code>MutationObserver</code> dịch tức thì toàn bộ giao diện Chat, Cài đặt, Tùy chỉnh (Plugins, Skills, Agents, MCP Servers, Hooks).
+                        </div>
+                    </div>
+                    <div class="ag-credit-item">
+                        <div style="font-weight:700;color:#c084fc;margin-bottom:4px;font-size:13.5px;">🚀 GitHub Auto-Updater & WMI Daemon</div>
+                        <div style="font-size:12px;color:#94a3b8;line-height:1.45;">
+                            Tự động tiêm Mod ngầm mỗi khi mở Antigravity, kiểm tra commit mới trên GitHub và hiện hộp thoại kính mờ cập nhật 1 chạm.
+                        </div>
+                    </div>
+                    <div class="ag-credit-item">
+                        <div style="font-weight:700;color:#fde047;margin-bottom:4px;font-size:13.5px;">💳 Cổng Thanh Toán Tự Động VietQR</div>
+                        <div style="font-size:12px;color:#94a3b8;line-height:1.45;">
+                            Tích hợp chuẩn <b>VietQR Napas 247 (TPBank - 74486568888 - DO TRUONG THINH)</b> tạo hóa đơn, mã giao dịch tự động & đếm ngược thời gian thực như Shop.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ag-mod-section">
+                <div class="ag-mod-section-title">Thông tin Bản quyền & Giấy phép (License)</div>
+                <div class="ag-mod-card">
+                    <div class="ag-mod-row">
+                        <div>
+                            <div class="ag-mod-label">Bản quyền © 2026 Silo (Đỗ Trường Thịnh — @siloneedsleep)</div>
+                            <div class="ag-mod-desc">Phát hành theo Giấy phép MIT (MIT License). Mọi đóng góp, sao (⭐ Star) trên GitHub hoặc Donate tùy tâm đều là động lực lớn để Silo duy trì dự án!</div>
+                        </div>
+                        <button type="button" class="ag-btn ag-btn-primary" id="ag-credit-open-donate-2">💖 Ủng hộ Silo</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        pane.querySelector("#ag-credit-open-donate").onclick = () => activateCustomSettingsTab("donate");
+        pane.querySelector("#ag-credit-open-donate-2").onclick = () => activateCustomSettingsTab("donate");
+        return pane;
+    }
+
+    function activateCustomSettingsTab(tabType) {
+        ensureSettingsModTab();
+        document.querySelectorAll('[data-testid="settings-sidebar"]').forEach(sb => {
+            sb.classList.remove("ag-sidebar-mod-active", "ag-sidebar-donate-active", "ag-sidebar-credit-active");
+            if (tabType === "mod") sb.classList.add("ag-sidebar-mod-active");
+            if (tabType === "donate") sb.classList.add("ag-sidebar-donate-active");
+            if (tabType === "credit") sb.classList.add("ag-sidebar-credit-active");
+        });
+        document.querySelectorAll(".overflow-auto > .grow.w-full").forEach(cg => {
+            cg.classList.remove("ag-mod-tab-active", "ag-donate-tab-active", "ag-credit-tab-active");
+            if (tabType === "mod") cg.classList.add("ag-mod-tab-active");
+            if (tabType === "donate") cg.classList.add("ag-donate-tab-active");
+            if (tabType === "credit") cg.classList.add("ag-credit-tab-active");
+        });
+        if (tabType === "mod") {
+            syncSettingsModPaneValues();
+        } else if (tabType === "donate") {
+            if (!shopOrderState.orderId) {
+                generateShopOrder(50000, "🍜 Phở bò đặc biệt", false);
+            } else {
+                renderShopInvoiceUI(false);
+            }
+        }
+    }
+
     function ensureSettingsModTab() {
         const sidebars = document.querySelectorAll('[data-testid="settings-sidebar"]');
         sidebars.forEach(sb => {
@@ -2083,14 +2573,44 @@
                 `;
                 firstList.appendChild(wrap);
             }
+
+            // Insert Donate & Credit right above "Provide Feedback" ("Gửi phản hồi")
+            const fbBtn = sb.querySelector('[data-testid="settings-nav-item-Provide Feedback"]');
+            const fbWrap = fbBtn ? fbBtn.closest(".relative.group\\/nav-item") : null;
+            if (fbWrap && fbWrap.parentElement && !sb.querySelector(".ag-settings-nav-credit")) {
+                const donateWrap = document.createElement("div");
+                donateWrap.className = "relative group/nav-item mx-2 ag-settings-donate-wrap";
+                donateWrap.innerHTML = `
+                    <button type="button" data-testid="settings-nav-item-Donate" class="ag-settings-nav-donate flex items-center gap-1.5 w-full px-2 py-1 rounded-lg cursor-pointer border-none text-left transition-all outline-none hover:bg-sidebar-muted">
+                        <span class="text-sm transition-colors select-none truncate flex-1 text-secondary-foreground group-hover/nav-item:text-foreground">☕ Donate (VietQR)</span>
+                    </button>
+                `;
+                const creditWrap = document.createElement("div");
+                creditWrap.className = "relative group/nav-item mx-2 ag-settings-credit-wrap";
+                creditWrap.innerHTML = `
+                    <button type="button" data-testid="settings-nav-item-Credit" class="ag-settings-nav-credit flex items-center gap-1.5 w-full px-2 py-1 rounded-lg cursor-pointer border-none text-left transition-all outline-none hover:bg-sidebar-muted">
+                        <span class="text-sm transition-colors select-none truncate flex-1 text-secondary-foreground group-hover/nav-item:text-foreground">👑 Credit: Silo</span>
+                    </button>
+                `;
+                fbWrap.parentElement.insertBefore(donateWrap, fbWrap);
+                fbWrap.parentElement.insertBefore(creditWrap, fbWrap);
+            }
         });
 
         const settingsDialog = document.querySelector('[aria-label="Settings"], .settings-modal-container') || document.getElementById("root");
         if (settingsDialog) {
             const contentGrow = settingsDialog.querySelector(".overflow-auto > .grow.w-full");
-            if (contentGrow && !contentGrow.querySelector("#ag-settings-mod-pane")) {
-                contentGrow.appendChild(buildSettingsModPane());
-                syncSettingsModPaneValues();
+            if (contentGrow) {
+                if (!contentGrow.querySelector("#ag-settings-mod-pane")) {
+                    contentGrow.appendChild(buildSettingsModPane());
+                    syncSettingsModPaneValues();
+                }
+                if (!contentGrow.querySelector("#ag-settings-donate-pane")) {
+                    contentGrow.appendChild(buildSettingsDonatePane());
+                }
+                if (!contentGrow.querySelector("#ag-settings-credit-pane")) {
+                    contentGrow.appendChild(buildSettingsCreditPane());
+                }
             }
         }
     }
@@ -2204,17 +2724,30 @@
         const modNavBtn = e.target.closest?.(".ag-settings-nav-mod");
         if (modNavBtn) {
             e.stopPropagation();
-            ensureSettingsModTab();
-            document.querySelectorAll('[data-testid="settings-sidebar"]').forEach(sb => sb.classList.add("ag-sidebar-mod-active"));
-            document.querySelectorAll(".overflow-auto > .grow.w-full").forEach(cg => cg.classList.add("ag-mod-tab-active"));
-            syncSettingsModPaneValues();
+            activateCustomSettingsTab("mod");
+            return;
+        }
+        const donateNavBtn = e.target.closest?.(".ag-settings-nav-donate");
+        if (donateNavBtn) {
+            e.stopPropagation();
+            activateCustomSettingsTab("donate");
+            return;
+        }
+        const creditNavBtn = e.target.closest?.(".ag-settings-nav-credit");
+        if (creditNavBtn) {
+            e.stopPropagation();
+            activateCustomSettingsTab("credit");
             return;
         }
 
-        const otherSettingsBtn = e.target.closest?.('[data-testid="settings-sidebar"] button:not(.ag-settings-nav-mod)');
+        const otherSettingsBtn = e.target.closest?.('[data-testid="settings-sidebar"] button:not(.ag-settings-nav-mod):not(.ag-settings-nav-donate):not(.ag-settings-nav-credit)');
         if (otherSettingsBtn) {
-            document.querySelectorAll('[data-testid="settings-sidebar"]').forEach(sb => sb.classList.remove("ag-sidebar-mod-active"));
-            document.querySelectorAll(".overflow-auto > .grow.w-full").forEach(cg => cg.classList.remove("ag-mod-tab-active"));
+            document.querySelectorAll('[data-testid="settings-sidebar"]').forEach(sb => {
+                sb.classList.remove("ag-sidebar-mod-active", "ag-sidebar-donate-active", "ag-sidebar-credit-active");
+            });
+            document.querySelectorAll(".overflow-auto > .grow.w-full").forEach(cg => {
+                cg.classList.remove("ag-mod-tab-active", "ag-donate-tab-active", "ag-credit-tab-active");
+            });
         }
 
         if (e.target.closest?.(".surface-composer-card")) {

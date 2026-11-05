@@ -1,5 +1,5 @@
 ﻿{
-    "updatedAt":  "2026-11-05T06:43:55Z",
-    "version":  "2.2.1",
-    "notes":  "Chuyển nút chuyển đổi ngôn ngữ (VI/ENG) lên thanh điều hướng trên cùng (cạnh cụm nút cửa sổ) \u0026 giữ nguyên thanh Menu gốc của Antigravity"
+    "updatedAt":  "2026-11-05T06:57:30Z",
+    "version":  "2.3.0",
+    "notes":  "Thêm mục Credit: Silo \u0026 Cổng Donate tự động VietQR (TPBank - 74486568888 - DO TRUONG THINH) trong Cài đặt (ngay trên Gửi phản hồi) và trên GitHub Repo"
 }
