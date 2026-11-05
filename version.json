@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-11-05T07:18:45Z",
-    "version": "2.4.0",
-    "notes": "Tích hợp cổng đối soát giao dịch VietQR thực tế (Real-time n8n Cloud Webhook + TPBank Database): Tự động quét mỗi 5 giây và từ chối xác nhận nếu chưa nhận được chuyển khoản thật"
+    "updatedAt": "2026-11-05T07:59:30Z",
+    "version": "2.5.0",
+    "notes": "Tích hợp cổng thanh toán SePay Live (SP-LIVE-DT985996) bảo mật bằng SHA-256: Tự động khởi tạo đơn hàng SePay (mã PAY...) và đối soát trạng thái CAPTURED thời gian thực mỗi 4 giây"
 }

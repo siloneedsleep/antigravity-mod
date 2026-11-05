@@ -1032,7 +1032,7 @@ $JsContent = @'
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.3.0";
+    const BUNDLED_BUILD_ID = "v3.4.0";
     if (!window.__agBootingCachedBundle) {
         try {
             const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
@@ -3104,14 +3104,21 @@ $JsContent = @'
         }, 700);
     }
 
+    // SePay Payment Gateway + n8n Cloud Endpoints (Credentials hashed with SHA-256)
+    const SEPAY_MERCHANT_ID = "SP-LIVE-DT985996";
+    const SEPAY_AUTH_SHA256 = "f7bb618f9420e7d2c5d7633322fb593a5f46c1d84e1977d3cf374244180542a5";
+    const SEPAY_INIT_API = "https://siloneedsleep.app.n8n.cloud/webhook/silo-sepay-init";
     const VIETQR_CHECK_API = "https://siloneedsleep.app.n8n.cloud/webhook/silo-vietqr-check";
     const VIETQR_WEBHOOK_API = "https://siloneedsleep.app.n8n.cloud/webhook/silo-vietqr-webhook";
     let shopTimerInterval = null;
     let shopPollInterval = null;
+    let shopInitDebounce = null;
     let shopCheckingNow = false;
+    let shopInitSeq = 0;
     let shopOrderState = {
         orderId: "",
         baseCode: "",
+        payCode: "",
         memo: "",
         amount: 50000,
         tierLabel: "🍜 Phở bò đặc biệt",
@@ -3119,29 +3126,43 @@ $JsContent = @'
         createdAt: "",
         remainingSec: 900,
         paid: false,
+        initializing: false,
         txRef: "",
         receivedAmount: 0,
         paidAt: "",
         lastErrorMsg: ""
     };
 
-    function generateShopOrder(amount, tierLabel, keepAmountInput) {
+    function scheduleShopOrder(amount, tierLabel, keepAmountInput, delayMs) {
+        if (shopInitDebounce) clearTimeout(shopInitDebounce);
+        shopOrderState.amount = Math.max(0, parseInt(amount, 10) || 0);
+        if (tierLabel) shopOrderState.tierLabel = tierLabel;
+        renderShopInvoiceUI(keepAmountInput);
+        shopInitDebounce = setTimeout(() => {
+            generateShopOrder(shopOrderState.amount, shopOrderState.tierLabel, keepAmountInput);
+        }, delayMs || 0);
+    }
+
+    async function generateShopOrder(amount, tierLabel, keepAmountInput) {
+        const seq = ++shopInitSeq;
         const rand6 = Math.floor(100000 + Math.random() * 900000);
         const now = new Date();
         const pad = (n) => String(n).padStart(2, "0");
         const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())} - ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
         const donorClean = (shopOrderState.donorName || "").replace(/[^a-zA-Z0-9 ]/g, "").trim().toUpperCase().slice(0, 10);
         const baseCode = `SILO${rand6}`;
-        const memo = donorClean ? `${baseCode} ${donorClean}` : baseCode;
+        const desc = donorClean ? `Donate Silo ${baseCode} ${donorClean}` : `Donate Silo ${baseCode}`;
 
         shopOrderState.orderId = `ORD-${rand6}`;
         shopOrderState.baseCode = baseCode;
-        shopOrderState.memo = memo;
+        shopOrderState.payCode = baseCode;
+        shopOrderState.memo = baseCode;
         shopOrderState.amount = Math.max(0, parseInt(amount, 10) || 0);
         if (tierLabel) shopOrderState.tierLabel = tierLabel;
         shopOrderState.createdAt = timeStr;
         shopOrderState.remainingSec = 900;
         shopOrderState.paid = false;
+        shopOrderState.initializing = true;
         shopOrderState.txRef = "";
         shopOrderState.receivedAmount = 0;
         shopOrderState.paidAt = "";
@@ -3150,6 +3171,26 @@ $JsContent = @'
         renderShopInvoiceUI(keepAmountInput);
         startShopCountdown();
         startShopAutoPolling();
+
+        // Register real order on SePay Gateway (SP-LIVE-DT985996) via n8n Cloud to obtain official PAY... transfer code
+        try {
+            const initUrl = `${SEPAY_INIT_API}?invoice=${encodeURIComponent(baseCode)}&amount=${encodeURIComponent(shopOrderState.amount)}&desc=${encodeURIComponent(desc)}&env=live&hash=${SEPAY_AUTH_SHA256}&t=${Date.now()}`;
+            const res = await fetch(initUrl, { cache: "no-store" });
+            if (res.ok && seq === shopInitSeq) {
+                const data = await res.json();
+                if (data && data.payCode) {
+                    shopOrderState.payCode = data.payCode;
+                    shopOrderState.memo = data.payCode;
+                }
+            }
+        } catch (err) {
+            console.warn("[Antigravity Mod] SePay order init fallback:", err);
+        } finally {
+            if (seq === shopInitSeq) {
+                shopOrderState.initializing = false;
+                renderShopInvoiceUI(true);
+            }
+        }
     }
 
     function startShopCountdown() {
@@ -3177,9 +3218,9 @@ $JsContent = @'
         shopPollInterval = setInterval(() => {
             const pane = document.getElementById("ag-settings-donate-pane");
             const isDonateActive = document.querySelector(".ag-donate-tab-active");
-            if (!pane || !isDonateActive || shopOrderState.paid || shopCheckingNow) return;
+            if (!pane || !isDonateActive || shopOrderState.paid || shopOrderState.initializing || shopCheckingNow) return;
             verifyShopTransactionReal(false);
-        }, 5000);
+        }, 4000);
     }
 
     async function verifyShopTransactionReal(isManual) {
@@ -3191,18 +3232,18 @@ $JsContent = @'
 
         if (isManual && confirmBtn) {
             confirmBtn.disabled = true;
-            confirmBtn.textContent = "🔄 Đang đối soát TPBank...";
+            confirmBtn.textContent = "🔄 Đang đối soát SePay & TPBank...";
         }
 
         try {
-            const url = `${VIETQR_CHECK_API}?code=${encodeURIComponent(shopOrderState.baseCode)}&amount=${encodeURIComponent(shopOrderState.amount)}&t=${Date.now()}`;
+            const url = `${VIETQR_CHECK_API}?code=${encodeURIComponent(shopOrderState.baseCode)}&payCode=${encodeURIComponent(shopOrderState.payCode || shopOrderState.memo)}&amount=${encodeURIComponent(shopOrderState.amount)}&env=live&hash=${SEPAY_AUTH_SHA256}&t=${Date.now()}`;
             const res = await fetch(url, { cache: "no-store" });
             if (!res.ok) throw new Error("HTTP " + res.status);
             const data = await res.json();
 
             if (data && data.paid === true) {
                 shopOrderState.paid = true;
-                shopOrderState.txRef = data.txRef || "FT-VERIFIED";
+                shopOrderState.txRef = data.txRef || shopOrderState.payCode || "SEPAY-VERIFIED";
                 shopOrderState.receivedAmount = Number(data.receivedAmount || shopOrderState.amount || 0);
                 shopOrderState.paidAt = data.paidAt || new Date().toLocaleString("vi-VN");
                 shopOrderState.lastErrorMsg = "";
@@ -3217,7 +3258,7 @@ $JsContent = @'
                 const bubble = document.getElementById("ag-furina-bubble");
                 if (bubble) {
                     const amtStr = shopOrderState.receivedAmount > 0 ? shopOrderState.receivedAmount.toLocaleString("vi-VN") + "đ" : "Donate";
-                    bubble.textContent = `Oa!! Hệ thống TPBank vừa báo ting ting ${amtStr} từ mã ${shopOrderState.baseCode} rồi!! Cảm ơn nhà tài trợ siêu cấp đáng yêu của Silo nha~ 💧👑✨`;
+                    bubble.textContent = `Oa!! Cổng SePay & TPBank vừa báo ting ting ${amtStr} từ đơn ${shopOrderState.payCode} rồi!! Cảm ơn nhà tài trợ siêu cấp đáng yêu của Silo nha~ 💧👑✨`;
                     bubble.classList.add("show");
                     furina3DState.bounceVel = 2500;
                     furina3DState.spinTarget += Math.PI * 2;
@@ -3225,16 +3266,17 @@ $JsContent = @'
                 }
             } else {
                 if (isManual) {
+                    const activeCode = shopOrderState.payCode || shopOrderState.memo;
                     shopOrderState.lastErrorMsg = (data && data.message)
                         ? data.message
-                        : `Hệ thống TPBank chưa ghi nhận giao dịch có nội dung "${shopOrderState.baseCode}". Vui lòng quét mã QR và hoàn tất chuyển khoản trước!`;
+                        : `Cổng SePay & TPBank chưa ghi nhận giao dịch với nội dung "${activeCode}".`;
                     if (errBox) {
                         errBox.style.display = "block";
                         errBox.innerHTML = `
-                            <div style="font-weight:700;color:#fca5a5;margin-bottom:3px;">❌ Chưa tìm thấy giao dịch trên hệ thống TPBank!</div>
+                            <div style="font-weight:700;color:#fca5a5;margin-bottom:3px;">❌ Chưa ghi nhận thanh toán trên cổng SePay (${SEPAY_MERCHANT_ID})!</div>
                             <div style="color:#fecaca;line-height:1.45;">
-                                Hệ thống đối soát thực tế (<b>Silo n8n Cloud</b>) chưa ghi nhận khoản chuyển nào có nội dung <code>${shopOrderState.baseCode}</code>.<br>
-                                Vui lòng mở App Ngân hàng quét mã <b>VietQR</b> bên trái và chuyển khoản trước nhé! <i>(Hệ thống vẫn đang tự động quét ngầm mỗi 5 giây...)</i>
+                                Hệ thống đối soát <b>SePay Payment Gateway & TPBank</b> chưa tìm thấy giao dịch chuyển khoản nào có nội dung <code>${activeCode}</code> (Trạng thái đơn: <b>${(data && data.orderStatus) || "PENDING"}</b>).<br>
+                                Vui lòng quét mã <b>VietQR</b> bên trái và chuyển khoản đúng nội dung <code>${activeCode}</code> trước nhé! <i>(Tự động quét ngầm mỗi 4 giây...)</i>
                             </div>
                         `;
                     }
@@ -3245,7 +3287,7 @@ $JsContent = @'
                     // Furina scolds playfully when clicking without transferring
                     const bubble = document.getElementById("ag-furina-bubble");
                     if (bubble) {
-                        bubble.textContent = `Ơ kìa~ Ngươi chưa chuyển khoản mã ${shopOrderState.baseCode} mà đã bấm xác nhận rồi hả?! Quét mã QR ủng hộ Silo thiệt đi rồi ta mới cảm ơn nha! 哼~ 💧😤`;
+                        bubble.textContent = `Ơ kìa~ Ngươi chưa chuyển khoản mã ${activeCode} mà đã bấm xác nhận rồi hả?! Quét mã QR ủng hộ Silo thiệt đi rồi ta mới cảm ơn nha! 哼~ 💧😤`;
                         bubble.classList.add("show");
                         furina3DState.bounceVel = 1400;
                         furina3DState.wiggleAmp = 0.25;
@@ -3257,7 +3299,7 @@ $JsContent = @'
             if (isManual) {
                 if (errBox) {
                     errBox.style.display = "block";
-                    errBox.innerHTML = `⚠️ Không thể kết nối máy chủ đối soát (${err.message || "Lỗi mạng"}). Vui lòng thử lại sau giây lát!`;
+                    errBox.innerHTML = `⚠️ Không thể kết nối cổng đối soát SePay (${err.message || "Lỗi mạng"}). Vui lòng thử lại sau giây lát!`;
                 }
                 if (confirmBtn) {
                     confirmBtn.disabled = false;
@@ -3283,7 +3325,8 @@ $JsContent = @'
         if (!pane) return;
 
         const amt = shopOrderState.amount;
-        const qrUrl = getVietQrUrl(amt, shopOrderState.memo);
+        const activeMemo = shopOrderState.payCode || shopOrderState.memo;
+        const qrUrl = getVietQrUrl(amt, activeMemo);
         const qrImg = pane.querySelector("#ag-shop-qr-img");
         const qrLink = pane.querySelector("#ag-shop-qr-download");
         if (qrImg && qrImg.getAttribute("data-src") !== qrUrl) {
@@ -3298,11 +3341,11 @@ $JsContent = @'
             const el = pane.querySelector(sel);
             if (el) el.textContent = val;
         };
-        setTxt("#ag-shop-order-id", "#" + shopOrderState.orderId);
+        setTxt("#ag-shop-order-id", "#" + shopOrderState.baseCode);
         setTxt("#ag-shop-order-time", shopOrderState.createdAt);
         setTxt("#ag-shop-tier-badge", shopOrderState.tierLabel);
         setTxt("#ag-shop-amount-display", amt > 0 ? amt.toLocaleString("vi-VN") + " VNĐ" : "Tùy tâm (Nhập trên App)");
-        setTxt("#ag-shop-memo-display", shopOrderState.memo);
+        setTxt("#ag-shop-memo-display", shopOrderState.initializing ? "Đang tạo mã SePay..." : activeMemo);
 
         if (!keepAmountInput) {
             const customInp = pane.querySelector("#ag-shop-custom-amount");
@@ -3320,8 +3363,8 @@ $JsContent = @'
                 receiptBox.style.display = "block";
                 const rxAmt = shopOrderState.receivedAmount > 0 ? shopOrderState.receivedAmount.toLocaleString("vi-VN") + " VNĐ" : "Đã xác nhận";
                 receiptBox.innerHTML = `
-                    🎉 <b>Biên lai xác thực giao dịch thành công! (Mã GD: <code>${shopOrderState.txRef}</code>)</b><br>
-                    Đã ghi nhận khoản chuyển <b>${rxAmt}</b> với nội dung <code>${shopOrderState.baseCode}</code> lúc ${shopOrderState.paidAt}. Cảm ơn bạn rất nhiều vì đã ủng hộ <b>Silo (Đỗ Trường Thịnh)</b>! 💧✨
+                    🎉 <b>Biên lai xác thực giao dịch SePay thành công! (Mã GD: <code>${shopOrderState.txRef}</code>)</b><br>
+                    Đã ghi nhận khoản chuyển <b>${rxAmt}</b> (Mã SePay: <code>${activeMemo}</code>) lúc ${shopOrderState.paidAt}. Cảm ơn bạn rất nhiều vì đã ủng hộ <b>Silo (Đỗ Trường Thịnh)</b>! 💧✨
                 `;
             } else {
                 receiptBox.style.display = "none";
@@ -3338,8 +3381,10 @@ $JsContent = @'
         if (statusDot) statusDot.style.background = shopOrderState.paid ? "#38bdf8" : "#10b981";
         if (statusText) {
             statusText.innerHTML = shopOrderState.paid
-                ? `✨ <b>Đã thanh toán thành công (#${shopOrderState.txRef})!</b> Xác thực bởi Silo n8n Cloud`
-                : `Đang chờ thanh toán • Tự động đối soát TPBank mỗi 5 giây`;
+                ? `✨ <b>Đã thanh toán thành công (#${shopOrderState.txRef})!</b> Xác thực bởi SePay (${SEPAY_MERCHANT_ID})`
+                : (shopOrderState.initializing
+                    ? `🔄 Đang khởi tạo mã đơn hàng trên cổng SePay (${SEPAY_MERCHANT_ID})...`
+                    : `Đang chờ thanh toán • Tự động đối soát SePay (${SEPAY_MERCHANT_ID}) mỗi 4s`);
         }
     }
 
@@ -3518,32 +3563,26 @@ $JsContent = @'
                 t.classList.add("active");
                 const amt = parseInt(t.getAttribute("data-amt"), 10) || 0;
                 const lbl = t.getAttribute("data-label") || "💖 Ủng hộ tùy tâm";
-                shopOrderState.amount = amt;
-                shopOrderState.tierLabel = lbl;
                 const customInp = pane.querySelector("#ag-shop-custom-amount");
                 if (customInp) customInp.value = amt > 0 ? String(amt) : "";
-                renderShopInvoiceUI(true);
+                scheduleShopOrder(amt, lbl, true, 50);
             };
         });
 
-        // Custom amount input live update
+        // Custom amount input live update (debounced SePay order creation)
         const customInp = pane.querySelector("#ag-shop-custom-amount");
         customInp.oninput = () => {
             tiers.forEach(x => x.classList.remove("active"));
             const val = Math.max(0, parseInt(customInp.value, 10) || 0);
-            shopOrderState.amount = val;
-            shopOrderState.tierLabel = val > 0 ? "💎 Mệnh giá tùy chỉnh" : "💖 Tùy tâm (Nhập trên App)";
-            renderShopInvoiceUI(true);
+            const lbl = val > 0 ? "💎 Mệnh giá tùy chỉnh" : "💖 Tùy tâm (Nhập trên App)";
+            scheduleShopOrder(val, lbl, true, 450);
         };
 
         // Donor name input live update
         const donorInp = pane.querySelector("#ag-shop-donor-name");
         donorInp.oninput = () => {
             shopOrderState.donorName = donorInp.value;
-            const clean = (donorInp.value || "").replace(/[^a-zA-Z0-9 ]/g, "").trim().toUpperCase().slice(0, 10);
-            const baseCode = shopOrderState.baseCode || shopOrderState.orderId.replace("ORD-", "SILO");
-            shopOrderState.memo = clean ? `${baseCode} ${clean}` : baseCode;
-            renderShopInvoiceUI(true);
+            scheduleShopOrder(shopOrderState.amount, shopOrderState.tierLabel, true, 550);
         };
 
         // Quick +amount chips
@@ -3551,19 +3590,16 @@ $JsContent = @'
             chip.onclick = () => {
                 const add = parseInt(chip.getAttribute("data-add-amt"), 10) || 0;
                 const next = (shopOrderState.amount || 0) + add;
-                shopOrderState.amount = next;
-                shopOrderState.tierLabel = "💎 Mệnh giá tùy chỉnh";
                 tiers.forEach(x => x.classList.remove("active"));
-                renderShopInvoiceUI(false);
+                scheduleShopOrder(next, "💎 Mệnh giá tùy chỉnh", false, 80);
             };
         });
         pane.querySelectorAll("[data-set-amt]").forEach(chip => {
             chip.onclick = () => {
                 const val = parseInt(chip.getAttribute("data-set-amt"), 10) || 0;
-                shopOrderState.amount = val;
-                shopOrderState.tierLabel = val >= 500000 ? "👑 Đại gia chống lưng (SSR)" : "💖 Tùy tâm (Nhập trên App)";
+                const lbl = val >= 500000 ? "👑 Đại gia chống lưng (SSR)" : "💖 Tùy tâm (Nhập trên App)";
                 tiers.forEach(x => x.classList.remove("active"));
-                renderShopInvoiceUI(false);
+                scheduleShopOrder(val, lbl, false, 80);
             };
         });
 
@@ -3590,7 +3626,7 @@ $JsContent = @'
             bindCopy(btn, () => btn.getAttribute("data-copy"));
         });
         bindCopy(pane.querySelector("#ag-copy-amt-btn"), () => String(shopOrderState.amount || ""));
-        bindCopy(pane.querySelector("#ag-copy-memo-btn"), () => shopOrderState.memo);
+        bindCopy(pane.querySelector("#ag-copy-memo-btn"), () => shopOrderState.payCode || shopOrderState.memo);
 
         // Real transaction check button (queries n8n Cloud + TPBank database)
         const confirmBtn = pane.querySelector("#ag-shop-confirm-paid");
