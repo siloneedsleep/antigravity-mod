@@ -4,7 +4,7 @@
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.5.1";
+    const BUNDLED_BUILD_ID = "v3.6.0";
     if (!window.__agBootingCachedBundle) {
         try {
             const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
@@ -1002,7 +1002,14 @@
         "tokens (": "token (",
         "tokens)": "token)",
         "Cut": "Cắt",
-        "Paste": "Dán"
+        "Paste": "Dán",
+        "Configure what the agent can do in local and remote conversations.": "Cấu hình những thao tác tác nhân được phép thực hiện trong cuộc trò chuyện cục bộ và từ xa.",
+        "Controls permissions for remote conversations.": "Kiểm soát quyền hạn cho các cuộc trò chuyện từ xa.",
+        "Permanently delete your remote conversations, projects, scheduled tasks, connected plugins and settings. Data in the desktop app and your Google account are not affected.": "Xóa vĩnh viễn các cuộc trò chuyện từ xa, dự án, tác vụ hẹn giờ, tiện ích đã kết nối và cài đặt của bạn. Dữ liệu trong ứng dụng máy tính và tài khoản Google của bạn không bị ảnh hưởng.",
+        "Advanced": "Nâng cao",
+        "Open settings menu": "Mở menu cài đặt",
+        "Loading customizations...": "Đang tải tùy chỉnh...",
+        "Turbo mode": "Tăng tốc (Turbo)"
     };
 
     const dictENtoVINorm = {};
@@ -1702,7 +1709,8 @@
     function translateDOM(lang) {
         if (!document.body) return;
 
-        // First handle elements whose childNodes are multiple split text nodes (e.g. React JSX: "No ", "automations", " yet")
+        // First handle elements whose childNodes are multiple split non-empty text nodes (e.g. React JSX: "No ", "automations", " yet")
+        // Also repair any single-word badge (like " High" -> [" ", "High"]) that was previously touched by older multi-node logic
         document.querySelectorAll("p, span, div, h1, h2, h3, label, button").forEach(el => {
             if (el.childElementCount !== 0 || el.childNodes.length <= 1) return;
             if (el.closest("#ag-settings-mod-pane, #ag-settings-donate-pane, #ag-settings-credit-pane, #ag-mod-quick-modal, #ag-furina-companion")) return;
@@ -1713,24 +1721,39 @@
                 }
             }
             if (textNodes.length <= 1) return;
-            if (lang === "EN" && el.__agMultiTranslated) {
-                textNodes.forEach(tn => {
-                    if (tn.__agOrigText !== undefined && tn.nodeValue === tn.__agTranslatedText) {
-                        tn.nodeValue = tn.__agOrigText;
-                    }
-                });
-                el.__agMultiTranslated = false;
-                return;
+
+            // If previously multi-translated, check whether React mutated any child text node or if only 1 node had non-whitespace text originally
+            if (el.__agMultiTranslated) {
+                const origNonEmptyCount = textNodes.filter(tn => (tn.__agOrigText !== undefined ? tn.__agOrigText : tn.nodeValue).trim().length > 0).length;
+                const reactMutated = textNodes.some(tn => tn.__agTranslatedText !== undefined && tn.nodeValue !== tn.__agTranslatedText);
+                if (lang === "EN" || origNonEmptyCount <= 1 || reactMutated) {
+                    textNodes.forEach(tn => {
+                        if (tn.__agOrigText !== undefined && (tn.nodeValue === tn.__agTranslatedText || tn.nodeValue === "")) {
+                            tn.nodeValue = tn.__agOrigText;
+                        }
+                        if (origNonEmptyCount <= 1 || reactMutated) {
+                            delete tn.__agOrigText;
+                            delete tn.__agTranslatedText;
+                        }
+                    });
+                    el.__agMultiTranslated = false;
+                    if (lang === "EN" || origNonEmptyCount <= 1) return;
+                } else {
+                    return;
+                }
             }
+
+            // Only combine when at least 2 child text nodes contain actual non-whitespace words (never combine [" ", "High"])
+            const nonEmptyNodes = textNodes.filter(tn => tn.nodeValue.trim().length > 0);
+            if (nonEmptyNodes.length <= 1) return;
+
             if (lang === "VI") {
                 const combined = textNodes.map(tn => tn.nodeValue).join("").trim();
                 if (!combined) return;
                 const tr = translateDynamicString(combined, "VI");
                 if (tr && tr !== combined) {
                     textNodes.forEach((tn, idx) => {
-                        if (tn.__agOrigText === undefined || tn.nodeValue !== tn.__agTranslatedText) {
-                            tn.__agOrigText = tn.nodeValue;
-                        }
+                        tn.__agOrigText = tn.nodeValue;
                         const nextVal = idx === 0 ? tr : "";
                         tn.__agTranslatedText = nextVal;
                         tn.nodeValue = nextVal;
@@ -2854,7 +2877,7 @@
                     <div class="ag-credit-avatar">👑</div>
                     <div>
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                            <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="font-size:20px;font-weight:800;color:#f8fafc;text-decoration:none;">Silo (Đỗ Trường Thịnh)</a>
+                            <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="font-size:20px;font-weight:700;color:#f8fafc;text-decoration:none;">Silo (Đỗ Trường Thịnh)</a>
                             <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);color:#7dd3fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;text-decoration:none;">@siloneedsleep</a>
                         </div>
                         <div style="font-size:13px;color:#cbd5e1;margin-bottom:8px;">
@@ -2926,6 +2949,13 @@
             if (tabType === "mod") sb.classList.add("ag-sidebar-mod-active");
             if (tabType === "donate") sb.classList.add("ag-sidebar-donate-active");
             if (tabType === "credit") sb.classList.add("ag-sidebar-credit-active");
+            const drawerWrap = sb.parentElement?.parentElement;
+            if (drawerWrap && drawerWrap.getAttribute("role") !== "dialog") {
+                const closeDrawerBtn = Array.from(drawerWrap.querySelectorAll("button")).find(b => !sb.contains(b));
+                if (closeDrawerBtn) {
+                    setTimeout(() => { try { closeDrawerBtn.click(); } catch (e) {} }, 20);
+                }
+            }
         });
         document.querySelectorAll(".overflow-auto > .grow.w-full").forEach(cg => {
             cg.classList.remove("ag-mod-tab-active", "ag-donate-tab-active", "ag-credit-tab-active");
@@ -2980,9 +3010,13 @@
                 fbWrap.parentElement.insertBefore(donateWrap, fbWrap);
                 fbWrap.parentElement.insertBefore(creditWrap, fbWrap);
             }
+
+            if (document.querySelector(".ag-mod-tab-active")) sb.classList.add("ag-sidebar-mod-active");
+            else if (document.querySelector(".ag-donate-tab-active")) sb.classList.add("ag-sidebar-donate-active");
+            else if (document.querySelector(".ag-credit-tab-active")) sb.classList.add("ag-sidebar-credit-active");
         });
 
-        const settingsDialog = document.querySelector('[aria-label="Settings"], .settings-modal-container') || document.getElementById("root");
+        const settingsDialog = document.querySelector('[aria-label="Settings"], [aria-label="Cài đặt"], .settings-modal-container') || document.getElementById("root");
         if (settingsDialog) {
             const contentGrow = settingsDialog.querySelector(".overflow-auto > .grow.w-full");
             if (contentGrow) {
@@ -3125,7 +3159,7 @@
             return;
         }
 
-        const otherSettingsBtn = e.target.closest?.('[data-testid="settings-sidebar"] button:not(.ag-settings-nav-mod):not(.ag-settings-nav-donate):not(.ag-settings-nav-credit)');
+        const otherSettingsBtn = e.target.closest?.('[data-testid="settings-sidebar"] button[data-testid^="settings-nav-item-"]:not(.ag-settings-nav-mod):not(.ag-settings-nav-donate):not(.ag-settings-nav-credit)');
         if (otherSettingsBtn) {
             document.querySelectorAll('[data-testid="settings-sidebar"]').forEach(sb => {
                 sb.classList.remove("ag-sidebar-mod-active", "ag-sidebar-donate-active", "ag-sidebar-credit-active");

@@ -22,6 +22,7 @@ $CssContent = @'
     --ag-bg-opacity: 0.16;
     --ag-pet-url: none;
     --ag-accent: #3b82f6;
+    --ag-font-sans: var(--font-sans, "Google Sans Flex", "Google Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif);
 }
 
 body::before {
@@ -216,6 +217,7 @@ textarea {
     padding: 4px 9px;
     font-size: 11px;
     font-weight: 500;
+    font-family: var(--ag-font-sans);
     white-space: nowrap;
     box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
     opacity: 0;
@@ -285,6 +287,7 @@ textarea {
     align-items: center;
     justify-content: center;
     gap: 14px;
+    font-family: var(--ag-font-sans);
     transition: opacity 0.5s ease, backdrop-filter 0.5s ease;
 }
 
@@ -329,7 +332,7 @@ textarea {
     margin: 0 auto;
     padding: 28px 32px 48px 32px;
     color: var(--foreground, #ede0d4);
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: var(--ag-font-sans);
 }
 
 .grow.w-full.ag-mod-tab-active > #ag-settings-mod-pane,
@@ -814,7 +817,7 @@ textarea {
     opacity: 0;
     pointer-events: none;
     transition: all 0.2s ease;
-    font-family: system-ui, sans-serif;
+    font-family: var(--ag-font-sans);
 }
 
 #ag-mod-quick-modal.open {
@@ -871,7 +874,7 @@ textarea {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: var(--ag-font-sans);
 }
 
 #ag-update-backdrop.open {
@@ -1009,6 +1012,7 @@ textarea {
     border-radius: 12px;
     font-size: 12.5px;
     font-weight: 500;
+    font-family: var(--ag-font-sans);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
@@ -1032,7 +1036,7 @@ $JsContent = @'
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.5.1";
+    const BUNDLED_BUILD_ID = "v3.6.0";
     if (!window.__agBootingCachedBundle) {
         try {
             const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
@@ -2030,7 +2034,14 @@ $JsContent = @'
         "tokens (": "token (",
         "tokens)": "token)",
         "Cut": "Cắt",
-        "Paste": "Dán"
+        "Paste": "Dán",
+        "Configure what the agent can do in local and remote conversations.": "Cấu hình những thao tác tác nhân được phép thực hiện trong cuộc trò chuyện cục bộ và từ xa.",
+        "Controls permissions for remote conversations.": "Kiểm soát quyền hạn cho các cuộc trò chuyện từ xa.",
+        "Permanently delete your remote conversations, projects, scheduled tasks, connected plugins and settings. Data in the desktop app and your Google account are not affected.": "Xóa vĩnh viễn các cuộc trò chuyện từ xa, dự án, tác vụ hẹn giờ, tiện ích đã kết nối và cài đặt của bạn. Dữ liệu trong ứng dụng máy tính và tài khoản Google của bạn không bị ảnh hưởng.",
+        "Advanced": "Nâng cao",
+        "Open settings menu": "Mở menu cài đặt",
+        "Loading customizations...": "Đang tải tùy chỉnh...",
+        "Turbo mode": "Tăng tốc (Turbo)"
     };
 
     const dictENtoVINorm = {};
@@ -2730,7 +2741,8 @@ $JsContent = @'
     function translateDOM(lang) {
         if (!document.body) return;
 
-        // First handle elements whose childNodes are multiple split text nodes (e.g. React JSX: "No ", "automations", " yet")
+        // First handle elements whose childNodes are multiple split non-empty text nodes (e.g. React JSX: "No ", "automations", " yet")
+        // Also repair any single-word badge (like " High" -> [" ", "High"]) that was previously touched by older multi-node logic
         document.querySelectorAll("p, span, div, h1, h2, h3, label, button").forEach(el => {
             if (el.childElementCount !== 0 || el.childNodes.length <= 1) return;
             if (el.closest("#ag-settings-mod-pane, #ag-settings-donate-pane, #ag-settings-credit-pane, #ag-mod-quick-modal, #ag-furina-companion")) return;
@@ -2741,24 +2753,39 @@ $JsContent = @'
                 }
             }
             if (textNodes.length <= 1) return;
-            if (lang === "EN" && el.__agMultiTranslated) {
-                textNodes.forEach(tn => {
-                    if (tn.__agOrigText !== undefined && tn.nodeValue === tn.__agTranslatedText) {
-                        tn.nodeValue = tn.__agOrigText;
-                    }
-                });
-                el.__agMultiTranslated = false;
-                return;
+
+            // If previously multi-translated, check whether React mutated any child text node or if only 1 node had non-whitespace text originally
+            if (el.__agMultiTranslated) {
+                const origNonEmptyCount = textNodes.filter(tn => (tn.__agOrigText !== undefined ? tn.__agOrigText : tn.nodeValue).trim().length > 0).length;
+                const reactMutated = textNodes.some(tn => tn.__agTranslatedText !== undefined && tn.nodeValue !== tn.__agTranslatedText);
+                if (lang === "EN" || origNonEmptyCount <= 1 || reactMutated) {
+                    textNodes.forEach(tn => {
+                        if (tn.__agOrigText !== undefined && (tn.nodeValue === tn.__agTranslatedText || tn.nodeValue === "")) {
+                            tn.nodeValue = tn.__agOrigText;
+                        }
+                        if (origNonEmptyCount <= 1 || reactMutated) {
+                            delete tn.__agOrigText;
+                            delete tn.__agTranslatedText;
+                        }
+                    });
+                    el.__agMultiTranslated = false;
+                    if (lang === "EN" || origNonEmptyCount <= 1) return;
+                } else {
+                    return;
+                }
             }
+
+            // Only combine when at least 2 child text nodes contain actual non-whitespace words (never combine [" ", "High"])
+            const nonEmptyNodes = textNodes.filter(tn => tn.nodeValue.trim().length > 0);
+            if (nonEmptyNodes.length <= 1) return;
+
             if (lang === "VI") {
                 const combined = textNodes.map(tn => tn.nodeValue).join("").trim();
                 if (!combined) return;
                 const tr = translateDynamicString(combined, "VI");
                 if (tr && tr !== combined) {
                     textNodes.forEach((tn, idx) => {
-                        if (tn.__agOrigText === undefined || tn.nodeValue !== tn.__agTranslatedText) {
-                            tn.__agOrigText = tn.nodeValue;
-                        }
+                        tn.__agOrigText = tn.nodeValue;
                         const nextVal = idx === 0 ? tr : "";
                         tn.__agTranslatedText = nextVal;
                         tn.nodeValue = nextVal;
@@ -3882,7 +3909,7 @@ $JsContent = @'
                     <div class="ag-credit-avatar">👑</div>
                     <div>
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                            <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="font-size:20px;font-weight:800;color:#f8fafc;text-decoration:none;">Silo (Đỗ Trường Thịnh)</a>
+                            <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="font-size:20px;font-weight:700;color:#f8fafc;text-decoration:none;">Silo (Đỗ Trường Thịnh)</a>
                             <a href="https://www.siloneedsleep.duckdns.org/" target="_blank" rel="noopener noreferrer" style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);color:#7dd3fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;text-decoration:none;">@siloneedsleep</a>
                         </div>
                         <div style="font-size:13px;color:#cbd5e1;margin-bottom:8px;">
@@ -3954,6 +3981,13 @@ $JsContent = @'
             if (tabType === "mod") sb.classList.add("ag-sidebar-mod-active");
             if (tabType === "donate") sb.classList.add("ag-sidebar-donate-active");
             if (tabType === "credit") sb.classList.add("ag-sidebar-credit-active");
+            const drawerWrap = sb.parentElement?.parentElement;
+            if (drawerWrap && drawerWrap.getAttribute("role") !== "dialog") {
+                const closeDrawerBtn = Array.from(drawerWrap.querySelectorAll("button")).find(b => !sb.contains(b));
+                if (closeDrawerBtn) {
+                    setTimeout(() => { try { closeDrawerBtn.click(); } catch (e) {} }, 20);
+                }
+            }
         });
         document.querySelectorAll(".overflow-auto > .grow.w-full").forEach(cg => {
             cg.classList.remove("ag-mod-tab-active", "ag-donate-tab-active", "ag-credit-tab-active");
@@ -4008,9 +4042,13 @@ $JsContent = @'
                 fbWrap.parentElement.insertBefore(donateWrap, fbWrap);
                 fbWrap.parentElement.insertBefore(creditWrap, fbWrap);
             }
+
+            if (document.querySelector(".ag-mod-tab-active")) sb.classList.add("ag-sidebar-mod-active");
+            else if (document.querySelector(".ag-donate-tab-active")) sb.classList.add("ag-sidebar-donate-active");
+            else if (document.querySelector(".ag-credit-tab-active")) sb.classList.add("ag-sidebar-credit-active");
         });
 
-        const settingsDialog = document.querySelector('[aria-label="Settings"], .settings-modal-container') || document.getElementById("root");
+        const settingsDialog = document.querySelector('[aria-label="Settings"], [aria-label="Cài đặt"], .settings-modal-container') || document.getElementById("root");
         if (settingsDialog) {
             const contentGrow = settingsDialog.querySelector(".overflow-auto > .grow.w-full");
             if (contentGrow) {
@@ -4153,7 +4191,7 @@ $JsContent = @'
             return;
         }
 
-        const otherSettingsBtn = e.target.closest?.('[data-testid="settings-sidebar"] button:not(.ag-settings-nav-mod):not(.ag-settings-nav-donate):not(.ag-settings-nav-credit)');
+        const otherSettingsBtn = e.target.closest?.('[data-testid="settings-sidebar"] button[data-testid^="settings-nav-item-"]:not(.ag-settings-nav-mod):not(.ag-settings-nav-donate):not(.ag-settings-nav-credit)');
         if (otherSettingsBtn) {
             document.querySelectorAll('[data-testid="settings-sidebar"]').forEach(sb => {
                 sb.classList.remove("ag-sidebar-mod-active", "ag-sidebar-donate-active", "ag-sidebar-credit-active");
@@ -4307,8 +4345,10 @@ Write-Host "[*] Dang kiem tra ban cap nhat moi nhat tu GitHub (siloneedsleep/ant
 try {
     $CommitApi = Invoke-RestMethod -Uri "https://api.github.com/repos/siloneedsleep/antigravity-mod/commits/main" -TimeoutSec 4 -ErrorAction Stop
     $LatestSha = $CommitApi.sha
-    $RemoteCss = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/$LatestSha/src/styles.css" -TimeoutSec 5 -ErrorAction Stop
-    $RemoteJs  = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/$LatestSha/src/mod.js" -TimeoutSec 5 -ErrorAction Stop
+    $RespCss   = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/$LatestSha/src/styles.css" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+    $RespJs    = Invoke-WebRequest -Uri "https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/$LatestSha/src/mod.js" -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+    $RemoteCss = [System.Text.Encoding]::UTF8.GetString($RespCss.RawContentStream.ToArray())
+    $RemoteJs  = [System.Text.Encoding]::UTF8.GetString($RespJs.RawContentStream.ToArray())
     if ($RemoteCss.Length -gt 1000 -and $RemoteJs.Length -gt 5000) {
         $CssContent = $RemoteCss
         $JsContent  = $RemoteJs
