@@ -4385,28 +4385,33 @@ while ($true) {
             $HubPages = $Targets | Where-Object { $_.type -eq 'page' -and $_.url -like 'https://127.0.0.1*' }
             foreach ($Hub in $HubPages) {
                 $Ws = New-Object System.Net.WebSockets.ClientWebSocket
-                $Ct = [System.Threading.CancellationToken]::None
-                $Ws.ConnectAsync([Uri]$Hub.webSocketDebuggerUrl, $Ct).Wait()
+                $Cts = New-Object System.Threading.CancellationTokenSource(2500)
+                try {
+                    $Ct = $Cts.Token
+                    $Ws.ConnectAsync([Uri]$Hub.webSocketDebuggerUrl, $Ct).Wait()
 
-                # Check if DOM is ready and whether mod UI is active in this window
-                $ChkExpr = "(document.readyState === 'complete' && Boolean(document.body)) ? (Boolean(window.__agModLoaded && document.getElementById('ag-lang-btn')) ? 'LOADED' : 'NEEDS_INJECT') : 'LOADING'"
-                $ChkMsg = @{ id = 1; method = "Runtime.evaluate"; params = @{ expression = $ChkExpr; returnByValue = $true } } | ConvertTo-Json -Compress
-                $ChkBytes = [System.Text.Encoding]::UTF8.GetBytes($ChkMsg)
-                $Ws.SendAsync((New-Object System.ArraySegment[byte](,$ChkBytes)), [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $Ct).Wait()
+                    # Check if DOM is ready and whether mod UI is active in this window
+                    $ChkExpr = "(document.readyState === 'complete' && Boolean(document.body)) ? (Boolean(window.__agModLoaded && document.getElementById('ag-lang-btn')) ? 'LOADED' : 'NEEDS_INJECT') : 'LOADING'"
+                    $ChkMsg = @{ id = 1; method = "Runtime.evaluate"; params = @{ expression = $ChkExpr; returnByValue = $true } } | ConvertTo-Json -Compress
+                    $ChkBytes = [System.Text.Encoding]::UTF8.GetBytes($ChkMsg)
+                    $Ws.SendAsync((New-Object System.ArraySegment[byte](,$ChkBytes)), [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $Ct).Wait()
 
-                $Buf = New-Object byte[] 8192
-                $Res = $Ws.ReceiveAsync((New-Object System.ArraySegment[byte](,$Buf)), $Ct).Result
-                $ResJson = [System.Text.Encoding]::UTF8.GetString($Buf, 0, $Res.Count) | ConvertFrom-Json
+                    $Buf = New-Object byte[] 8192
+                    $Res = $Ws.ReceiveAsync((New-Object System.ArraySegment[byte](,$Buf)), $Ct).Result
+                    $ResJson = [System.Text.Encoding]::UTF8.GetString($Buf, 0, $Res.Count) | ConvertFrom-Json
 
-                if ($ResJson.result.result.value -eq 'NEEDS_INJECT') {
-                    $InjectJs = [System.IO.File]::ReadAllText($BundlePath, [System.Text.Encoding]::UTF8)
-                    $InjMsg = @{ id = 2; method = "Runtime.evaluate"; params = @{ expression = $InjectJs; returnByValue = $true } } | ConvertTo-Json -Compress -Depth 5
-                    $InjBytes = [System.Text.Encoding]::UTF8.GetBytes($InjMsg)
-                    $Ws.SendAsync((New-Object System.ArraySegment[byte](,$InjBytes)), [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $Ct).Wait()
-                    Start-Sleep -Milliseconds 150
+                    if ($ResJson.result.result.value -eq 'NEEDS_INJECT') {
+                        $InjectJs = [System.IO.File]::ReadAllText($BundlePath, [System.Text.Encoding]::UTF8)
+                        $InjMsg = @{ id = 2; method = "Runtime.evaluate"; params = @{ expression = $InjectJs; returnByValue = $true } } | ConvertTo-Json -Compress -Depth 5
+                        $InjBytes = [System.Text.Encoding]::UTF8.GetBytes($InjMsg)
+                        $Ws.SendAsync((New-Object System.ArraySegment[byte](,$InjBytes)), [System.Net.WebSockets.WebSocketMessageType]::Text, $true, $Ct).Wait()
+                        $null = $Ws.ReceiveAsync((New-Object System.ArraySegment[byte](,$Buf)), $Ct).Result
+                    }
+                    $Ws.CloseOutputAsync([System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure, "", $Ct).Wait()
+                } catch {} finally {
+                    try { $Ws.Dispose() } catch {}
+                    try { $Cts.Dispose() } catch {}
                 }
-                $Ws.CloseAsync([System.Net.WebSockets.WebSocketCloseStatus]::NormalClosure, "", $Ct).Wait()
-                $Ws.Dispose()
             }
         } catch {}
     }
@@ -4415,13 +4420,20 @@ while ($true) {
 '@
 [System.IO.File]::WriteAllText($DaemonScriptPath, $DaemonCode, $Utf8NoBom)
 
-# Đăng ký tự khởi động ngầm cùng Windows (HKCU Run) và kích hoạt ngay dưới dạng tiến trình độc lập ẩn (Hidden WMI Process)
+# Đăng ký tự khởi động ngầm cùng Windows (Startup VBS + HKCU Run) và kích hoạt ngay dưới dạng tiến trình ẩn
 try {
-    $DaemonCmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$DaemonScriptPath`""
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "AntigravityModDaemon" -Value $DaemonCmd -Force
+    $VbsLauncherPath = "$ModDataDir\ag-launcher.vbs"
+    $VbsCode = 'CreateObject("WScript.Shell").Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File """ & CreateObject("WScript.Shell").ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\AntigravityMod\ag-daemon.ps1""", 0, False'
+    [System.IO.File]::WriteAllText($VbsLauncherPath, $VbsCode, $Utf8NoBom)
+
+    $StartupFolderVbs = Join-Path ([Environment]::GetFolderPath("Startup")) "AntigravityMod.vbs"
+    [System.IO.File]::WriteAllText($StartupFolderVbs, $VbsCode, $Utf8NoBom)
+
+    $LauncherCmd = "wscript.exe //B //NoLogo `"$VbsLauncherPath`""
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "AntigravityModDaemon" -Value $LauncherCmd -Force
+
     Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe' AND ProcessId != $PID AND CommandLine LIKE '%ag-daemon.ps1%'" -ErrorAction SilentlyContinue | Invoke-CimMethod -MethodName Terminate | Out-Null
-    $StartupCfg = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }
-    Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $DaemonCmd; ProcessStartupInformation = $StartupCfg } | Out-Null
+    Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $LauncherCmd } | Out-Null
     Write-Host "[+] Da kich hoat dich vu Auto-Mod & GitHub Auto-Update vinh vien!" -ForegroundColor Green
 } catch {}
 
