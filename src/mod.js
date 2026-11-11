@@ -4,7 +4,7 @@
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.6.0";
+    const BUNDLED_BUILD_ID = "v3.7.0";
     if (!window.__agBootingCachedBundle) {
         try {
             const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
@@ -1009,7 +1009,52 @@
         "Advanced": "Nâng cao",
         "Open settings menu": "Mở menu cài đặt",
         "Loading customizations...": "Đang tải tùy chỉnh...",
-        "Turbo mode": "Tăng tốc (Turbo)"
+        "Turbo mode": "Tăng tốc (Turbo)",
+        "Agent said": "AI đã trả lời",
+        "You said": "Bạn đã nói",
+        "Agent working": "AI đang xử lý",
+        "Untitled Conversation": "Cuộc trò chuyện chưa đặt tên",
+        "Diff contents are no longer available.": "Nội dung so sánh (Diff) không còn khả dụng.",
+        "Ran command, edited file": "Đã chạy lệnh, đã sửa tệp",
+        "Edited file, ran command": "Đã sửa tệp, đã chạy lệnh",
+        "Ran command": "Đã chạy lệnh",
+        "Ran commands": "Đã chạy các lệnh",
+        "Edited file": "Đã sửa tệp",
+        "Edited files": "Đã sửa các tệp",
+        "Read file": "Đã đọc tệp",
+        "Read files": "Đã đọc các tệp",
+        "Project options": "Tùy chọn dự án",
+        "New Conversation in Project": "Cuộc trò chuyện mới trong dự án",
+        "Copy Project Name": "Sao chép tên dự án",
+        "Project Settings": "Cài đặt dự án",
+        "Show in File Explorer": "Hiển thị trong File Explorer",
+        "Create Project": "Tạo dự án",
+        "Command Palette": "Bảng lệnh (Command Palette)",
+        "Minimize": "Thu nhỏ",
+        "Maximize": "Phóng to",
+        "Unavailable": "Không khả dụng",
+        "Interface Layout": "Bố cục giao diện",
+        "Knowledge Work": "Công việc Tri thức (Tối giản)",
+        "Simplified interface for research, writing, and everyday tasks.": "Giao diện tinh gọn cho nghiên cứu, viết lách và các tác vụ hàng ngày.",
+        "Software Engineering": "Kỹ thuật Phần mềm (Đầy đủ)",
+        "Full interface for coding, developer tools, and managing agents.": "Giao diện đầy đủ cho lập trình, công cụ nhà phát triển và quản lý tác nhân.",
+        "Font Size": "Cỡ chữ",
+        "Code Preview": "Xem trước mã nguồn",
+        "Background color picker": "Bộ chọn màu nền",
+        "Foreground color picker": "Bộ chọn màu chữ",
+        "Accent color picker": "Bộ chọn màu nhấn",
+        "Configure built-in browser, link opening, and browser subagent preferences.": "Cấu hình trình duyệt tích hợp, cách mở liên kết và tùy chọn tác nhân phụ trình duyệt.",
+        "Configure allowed and denied URLs for the browser subagent (invoked with /browser). Requires": "Cấu hình danh sách URL được phép và bị chặn cho tác nhân phụ trình duyệt (gọi bằng /browser). Yêu cầu",
+        "Configure allowed and denied URLs for the browser subagent (invoked with /browser). Requires Google Chrome.": "Cấu hình danh sách URL được phép và bị chặn cho tác nhân phụ trình duyệt (gọi bằng /browser). Yêu cầu Google Chrome.",
+        "Manage project folders and settings.": "Quản lý thư mục và cài đặt của dự án.",
+        "Developer-only tools. These settings do not affect other users.": "Công cụ chỉ dành cho nhà phát triển. Các cài đặt này không ảnh hưởng tới người dùng khác.",
+        "Create plugin": "Tạo tiện ích (Plugin)",
+        "Copy Config File Path": "Sao chép đường dẫn tệp cấu hình",
+        "\"docker\" is not installed or not on PATH, install it or set \"command\" to its full path": "\"docker\" chưa được cài đặt hoặc chưa có trong biến môi trường PATH, vui lòng cài đặt hoặc cấu hình đường dẫn đầy đủ vào mục \"command\"",
+        "Use this skill for generative video editing, text-to-video, image- and video-referenced video generation, first-frame-to-video, first-and-last-frame transitions, and video extensions using Gemini Omni 1.2 Flash (gemini-omni-1.2-flash) via the official google-genai SDK. Includes workflows for pre-processing/optimizing high-resolution or long source videos with ffmpeg, stripping audio for full sound regeneration, and handling turn-by-turn video editing and parallel execution.": "Kỹ năng chỉnh sửa video tạo sinh, tạo video từ văn bản/hình ảnh/video tham chiếu, chuyển cảnh khung hình đầu-cuối và mở rộng video bằng Gemini Omni 1.2 Flash (gemini-omni-1.2-flash) qua SDK google-genai chính thức (kèm tối ưu ffmpeg và xử lý âm thanh).",
+        "Migrates the user's MCP servers, skills, slash commands, subagents, and instruction files from other coding agents (Claude Code, Codex, Cursor, Gemini CLI) into one new Antigravity plugin. Use when the user wants to bring over, import, or migrate their setup or config from another agent or tool. Don't use for installing Marketplace plugins or authoring a new plugin from scratch (use the plugin skill).": "Di chuyển máy chủ MCP, kỹ năng, lệnh gạch chéo (/), tác nhân phụ và tệp chỉ dẫn từ các công cụ AI khác (Claude Code, Codex, Cursor, Gemini CLI) sang một tiện ích Antigravity mới.",
+        "(Preview & Quota Heavy) Run a swarm: several agents working in parallel on one task, each in its own conversation, collaborating through a shared message board. Use when the work splits into pieces that can be done at the same time, or when a second pair of eyes should check the first pair's work.": "(Bản thử nghiệm & Tốn hạn mức) Chạy bầy đàn tác nhân (Swarm): nhiều tác nhân AI làm việc song song trên cùng một nhiệm vụ, mỗi tác nhân trong một hội thoại riêng và phối hợp qua bảng tin chung.",
+        "ONLY for the native-swarm worker whose brief says it is the monitor. On a timer, it checks whether the whole swarm has stalled and calls on the one member who can unstick it. Coordinators and other workers: do not load this.": "CHỈ dành riêng cho tác nhân giám sát (Monitor) trong chế độ Swarm. Định kỳ kiểm tra xem bầy đàn tác nhân có bị kẹt không và đánh thức thành viên phù hợp để gỡ rối."
     };
 
     const dictENtoVINorm = {};
@@ -1112,6 +1157,36 @@
             if ((m = /^System default \((.+)\)$/i.exec(val))) return `Mặc định hệ thống (${m[1]})`;
             if ((m = /^This (.+) overrides your global permission settings\.$/i.exec(val))) return `Thiết lập này ghi đè cài đặt quyền hạn toàn cục của bạn.`;
             if ((m = /^(.+) setting$/i.exec(val))) return `Cài đặt ${dictENtoVI[m[1]] || m[1]}`;
+            if ((m = /^Version (\d+\.\d+\.\d+.*)$/i.exec(val))) return `Phiên bản ${m[1]}`;
+            if ((m = /^See (\d+) more plugins?$/i.exec(val))) return `Xem thêm ${m[1]} tiện ích`;
+            if ((m = /^See (\d+) more skills?$/i.exec(val))) return `Xem thêm ${m[1]} kỹ năng`;
+            if ((m = /^See (\d+) more (.+)$/i.exec(val))) return `Xem thêm ${m[1]} ${dictENtoVI[m[2]] || m[2]}`;
+            if ((m = /^Fix with Agent:\s*(.+)$/i.exec(val))) return `Sửa bằng AI: ${m[1]}`;
+            if ((m = /^Permanently delete (.+) including$/i.exec(val))) return `Xóa vĩnh viễn ${m[1]} bao gồm`;
+            if ((m = /^Permanently delete (.+) including (.+)\.$/i.exec(val))) return `Xóa vĩnh viễn ${m[1]} bao gồm ${translateDynamicString(m[2], "VI") || m[2]}.`;
+            if ((m = /^(.+),\s*(\d+)\s*turns?$/i.exec(val))) return `${m[1]}, ${m[2]} lượt`;
+            if ((m = /^Running (.+)$/.exec(val))) return `Đang chạy: ${m[1]}`;
+            if ((m = /^Ran (.+)$/.exec(val))) return `Đã chạy: ${m[1]}`;
+            if (/^(Explored( files?)?|Ran commands?|Edited files?|Created files?|Read files?|Searched|Analyzed)(,\s*(explored( files?)?|ran commands?|edited files?|created files?|read files?|searched|analyzed))*$/i.test(val)) {
+                const mapPart = {
+                    "explored": "đã tìm hiểu",
+                    "explored file": "đã tìm hiểu tệp",
+                    "explored files": "đã tìm hiểu các tệp",
+                    "ran command": "đã chạy lệnh",
+                    "ran commands": "đã chạy các lệnh",
+                    "edited file": "đã sửa tệp",
+                    "edited files": "đã sửa các tệp",
+                    "created file": "đã tạo tệp",
+                    "created files": "đã tạo các tệp",
+                    "read file": "đã đọc tệp",
+                    "read files": "đã đọc các tệp",
+                    "searched": "đã tìm kiếm",
+                    "analyzed": "đã phân tích"
+                };
+                const parts = val.split(/,\s*/).map(p => mapPart[p.toLowerCase()] || p);
+                const joined = parts.join(", ");
+                return joined.charAt(0).toUpperCase() + joined.slice(1);
+            }
         } else {
             if (val === "Tùy chỉnh Mod") return "Customizations";
             if (dictVItoEN[val]) return dictVItoEN[val];
@@ -1147,6 +1222,7 @@
         initialized: false,
         loading: false,
         renderer: null,
+        canvasEl: null,
         scene: null,
         camera: null,
         pivot: null,
@@ -1176,7 +1252,13 @@
             const THREE = await import("https://esm.sh/three@0.160.0");
             const { FBXLoader } = await import("https://esm.sh/three@0.160.0/examples/jsm/loaders/FBXLoader.js");
 
-            const assetBase = "https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/main/assets/furina-3d/";
+            let assetBase = "http://127.0.0.1:48765/furina-3d/";
+            try {
+                const probe = await fetch(assetBase + "furi.fbx", { method: "HEAD" });
+                if (!probe.ok) throw new Error("Local asset server not ready");
+            } catch (_) {
+                assetBase = "https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/main/assets/furina-3d/";
+            }
             const manager = new THREE.LoadingManager();
             manager.setURLModifier((url) => {
                 if (url.startsWith("data:") || url.startsWith("blob:")) return url;
@@ -1257,15 +1339,23 @@
             renderer.outputColorSpace = THREE.SRGBColorSpace;
 
             furina3DState.renderer = renderer;
+            furina3DState.canvasEl = canvas;
             furina3DState.scene = scene;
             furina3DState.camera = camera;
             furina3DState.pivot = pivot;
             furina3DState.initialized = true;
             furina3DState.loading = false;
 
-            const is3DMode = !config.petUrl || config.petUrl === "furina-3d";
-            if (is3DMode) {
-                furinaEl.classList.add("ag-3d-ready");
+            const curFurinaEl = document.getElementById("ag-furina-companion");
+            if (curFurinaEl) {
+                const curCanvas = curFurinaEl.querySelector("#ag-furina-3d-canvas");
+                if (curCanvas && curCanvas !== canvas) {
+                    curFurinaEl.replaceChild(canvas, curCanvas);
+                }
+                const is3DMode = !config.petUrl || config.petUrl === "furina-3d";
+                if (is3DMode) {
+                    curFurinaEl.classList.add("ag-3d-ready");
+                }
             }
 
             let lastTime = performance.now();
@@ -1546,7 +1636,15 @@
 
         card.appendChild(wrap);
         if (!config.petUrl || config.petUrl === "furina-3d") {
-            initFurina3DEngine();
+            if (furina3DState.initialized && furina3DState.canvasEl) {
+                const placeholderCanvas = wrap.querySelector("#ag-furina-3d-canvas");
+                if (placeholderCanvas && placeholderCanvas !== furina3DState.canvasEl) {
+                    wrap.replaceChild(furina3DState.canvasEl, placeholderCanvas);
+                }
+                wrap.classList.add("ag-3d-ready");
+            } else {
+                initFurina3DEngine();
+            }
         }
     }
 
