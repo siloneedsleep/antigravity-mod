@@ -1,5 +1,5 @@
 {
-    "updatedAt": "2026-11-11T05:06:00Z",
-    "version": "2.7.0",
-    "notes": "Cập nhật tương thích Antigravity 2.31.0: Việt hóa toàn bộ tính năng mới (Bố cục giao diện Knowledge Work / Software Engineering, Cài đặt Trình duyệt & Dự án, Menu tùy chọn dự án, Kỹ năng Swarm & Gemini Omni 1.2 Flash), giữ nguyên 3D Furina khi chuyển tab và cố định Auto-Daemon."
+    "updatedAt": "2026-11-19T00:00:00Z",
+    "version": "2.8.0",
+    "notes": "Fix triệt để lỗi mất ảnh nền (Background) & cài đặt khi tắt/mở lại Antigravity (do ứng dụng đổi cổng localhost làm reset localStorage): Lưu cấu hình & file ảnh nền vĩnh viễn trên ổ cứng (%LOCALAPPDATA%\\AntigravityMod\\user-config.json) kèm nút Chọn ảnh trực tiếp từ máy tính."
 }

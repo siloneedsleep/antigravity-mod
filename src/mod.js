@@ -4,7 +4,7 @@
     if (window.top && window.self && window.top !== window.self) return;
 
     // Hot-Update Bootstrapper: If user updated via GitHub in-app updater, boot latest cached bundle
-    const BUNDLED_BUILD_ID = "v3.7.0";
+    const BUNDLED_BUILD_ID = "v3.8.0";
     if (!window.__agBootingCachedBundle) {
         try {
             const lastBuildId = localStorage.getItem("ag_mod_bundled_build_id");
@@ -44,6 +44,8 @@
 
     const cssText = __AG_CSS_JSON__;
 
+    const LOCAL_ASSET_SERVER = "http://127.0.0.1:48765";
+
     const defaultConfig = {
         bgUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920",
         bgOpacity: "0.16",
@@ -51,21 +53,162 @@
         accent: "#3b82f6",
         showLangBtn: true,
         followTyping: true,
-        autoCheckUpdate: true
+        autoCheckUpdate: true,
+        furinaVer: 3
     };
 
-    let savedCfg = {};
-    try { savedCfg = JSON.parse(localStorage.getItem("ag_mod_config") || "{}"); } catch (e) {}
-    if (savedCfg.furinaVer !== 3) {
-        savedCfg.petUrl = "furina-3d";
-        savedCfg.accent = "#3b82f6";
-        savedCfg.followTyping = true;
-        savedCfg.furinaVer = 3;
+    function normalizeBgUrl(url) {
+        if (url === undefined || url === null) return "";
+        const trimmed = String(url).trim();
+        if (trimmed === "https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/main/assets/furina-3d/furiba.png") {
+            return `${LOCAL_ASSET_SERVER}/furina-3d/furiba.png`;
+        }
+        return trimmed;
     }
-    let config = Object.assign({}, defaultConfig, savedCfg);
+
+    let diskCfg = (typeof window.__AG_DISK_CONFIG__ === "object" && window.__AG_DISK_CONFIG__) ? window.__AG_DISK_CONFIG__ : {};
+    let savedCfg = {};
+    let hasLocalCfg = false;
+    try {
+        const rawLocal = localStorage.getItem("ag_mod_config");
+        if (rawLocal) {
+            savedCfg = JSON.parse(rawLocal);
+            hasLocalCfg = true;
+        }
+    } catch (e) {}
+
+    // Antigravity binds a new random localhost port on every app restart (which resets origin-scoped localStorage).
+    // Merge disk-persisted config (__AG_DISK_CONFIG__) so saved background & settings never disappear after closing app!
+    let mergedSaved = hasLocalCfg ? Object.assign({}, diskCfg, savedCfg) : Object.assign({}, savedCfg, diskCfg);
+    if (mergedSaved.furinaVer !== 3) {
+        mergedSaved.petUrl = mergedSaved.petUrl || "furina-3d";
+        mergedSaved.accent = mergedSaved.accent || "#3b82f6";
+        if (mergedSaved.followTyping === undefined) mergedSaved.followTyping = true;
+        mergedSaved.furinaVer = 3;
+    }
+    if (mergedSaved.bgUrl !== undefined) {
+        mergedSaved.bgUrl = normalizeBgUrl(mergedSaved.bgUrl);
+    }
+    let config = Object.assign({}, defaultConfig, mergedSaved);
     localStorage.setItem("ag_mod_config", JSON.stringify(config));
 
-    let currentLang = localStorage.getItem("ag_mod_lang") || "VI";
+    let currentLang = localStorage.getItem("ag_mod_lang") || diskCfg.lang || "VI";
+    localStorage.setItem("ag_mod_lang", currentLang);
+
+    function persistModConfig() {
+        config.furinaVer = 3;
+        config.bgUrl = normalizeBgUrl(config.bgUrl);
+        localStorage.setItem("ag_mod_config", JSON.stringify(config));
+        localStorage.setItem("ag_mod_lang", currentLang);
+        const payload = Object.assign({}, config, { lang: currentLang });
+        window.__AG_DISK_CONFIG__ = payload;
+        fetch(`${LOCAL_ASSET_SERVER}/config`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }).catch(() => {});
+    }
+
+    async function resolveAndPersistBgUrl(rawUrl) {
+        const val = normalizeBgUrl(rawUrl);
+        if (!val) {
+            config.bgUrl = "";
+            persistModConfig();
+            return "";
+        }
+        const cleanPath = val.replace(/^["']|["']$/g, "").trim();
+        if (/^[a-zA-Z]:[\\/]/.test(cleanPath) || /^file:\/\/\//i.test(cleanPath)) {
+            try {
+                const res = await fetch(`${LOCAL_ASSET_SERVER}/copy-local-bg`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ path: cleanPath })
+                });
+                const data = await res.json();
+                if (data && data.ok && data.url) {
+                    config.bgUrl = data.url;
+                    persistModConfig();
+                    return data.url;
+                }
+            } catch (e) {}
+        }
+        config.bgUrl = val;
+        persistModConfig();
+        return val;
+    }
+
+    async function syncConfigFromDiskServer() {
+        try {
+            const res = await fetch(`${LOCAL_ASSET_SERVER}/config`, { cache: "no-store" });
+            if (!res.ok) return;
+            const diskData = await res.json();
+            if (diskData && typeof diskData === "object" && Object.keys(diskData).length > 0) {
+                if (diskData.bgUrl !== undefined) config.bgUrl = normalizeBgUrl(diskData.bgUrl);
+                if (diskData.bgOpacity !== undefined) config.bgOpacity = String(diskData.bgOpacity);
+                if (diskData.petUrl !== undefined) config.petUrl = diskData.petUrl;
+                if (diskData.accent !== undefined) config.accent = diskData.accent;
+                if (diskData.showLangBtn !== undefined) config.showLangBtn = diskData.showLangBtn;
+                if (diskData.followTyping !== undefined) config.followTyping = diskData.followTyping;
+                if (diskData.autoCheckUpdate !== undefined) config.autoCheckUpdate = diskData.autoCheckUpdate;
+                if (diskData.lang && (diskData.lang === "VI" || diskData.lang === "EN")) {
+                    currentLang = diskData.lang;
+                    localStorage.setItem("ag_mod_lang", currentLang);
+                    const langBtn = document.getElementById("ag-lang-btn");
+                    if (langBtn) langBtn.textContent = currentLang === "VI" ? "VI" : "ENG";
+                }
+                localStorage.setItem("ag_mod_config", JSON.stringify(config));
+                window.__AG_DISK_CONFIG__ = Object.assign({}, config, { lang: currentLang });
+                applyConfig();
+                syncSettingsModPaneValues();
+            } else {
+                persistModConfig();
+            }
+        } catch (e) {}
+    }
+
+    function triggerLocalBgFilePicker(onDone) {
+        let fileInp = document.getElementById("ag-hidden-bg-file-input");
+        if (!fileInp) {
+            fileInp = document.createElement("input");
+            fileInp.type = "file";
+            fileInp.id = "ag-hidden-bg-file-input";
+            fileInp.accept = "image/*";
+            fileInp.style.display = "none";
+            document.body.appendChild(fileInp);
+        }
+        fileInp.value = "";
+        fileInp.onchange = () => {
+            const file = fileInp.files && fileInp.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const dataUrl = reader.result;
+                try {
+                    const res = await fetch(`${LOCAL_ASSET_SERVER}/upload-bg`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ dataUrl, name: file.name })
+                    });
+                    const data = await res.json();
+                    if (data && data.ok && data.url) {
+                        config.bgUrl = data.url;
+                        persistModConfig();
+                        applyConfig();
+                        syncSettingsModPaneValues();
+                        if (typeof onDone === "function") onDone(data.url);
+                        return;
+                    }
+                } catch (e) {}
+                config.bgUrl = dataUrl;
+                persistModConfig();
+                applyConfig();
+                syncSettingsModPaneValues();
+                if (typeof onDone === "function") onDone(dataUrl);
+            };
+            reader.readAsDataURL(file);
+        };
+        fileInp.click();
+    }
 
     const dictENtoVI = {
         // Top Bar & Sidebar
@@ -1924,7 +2067,7 @@
         }
         setTimeout(() => {
             currentLang = targetLang;
-            localStorage.setItem("ag_mod_lang", currentLang);
+            persistModConfig();
             if (langBtn) langBtn.textContent = currentLang === "VI" ? "VI" : "ENG";
             translateDOM(currentLang);
             syncSettingsModPaneValues();
@@ -2014,11 +2157,14 @@
                 <div class="ag-mod-section-title">Hình nền (Background)</div>
                 <div class="ag-mod-card">
                     <div class="ag-mod-row-col">
-                        <div class="ag-mod-label">Link ảnh nền (URL)</div>
-                        <input type="text" class="ag-mod-input" id="ag-pane-bg" placeholder="Dán link ảnh nền (JPG, PNG, WebP, GIF)...">
+                        <div class="ag-mod-label">Link ảnh nền (URL hoặc Đường dẫn file ảnh trong máy)</div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" class="ag-mod-input" id="ag-pane-bg" placeholder="Dán link ảnh nền (JPG, PNG, WebP, GIF) hoặc đường dẫn C:\..." style="flex:1;">
+                            <button type="button" class="ag-btn ag-btn-ghost" id="ag-pane-upload-bg" style="white-space:nowrap;padding:8px 12px;">📁 Chọn ảnh từ máy</button>
+                        </div>
                         <div class="ag-chips">
                             <span class="ag-chip" data-bg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920">🌲 Rừng Đêm (Mặc định)</span>
-                            <span class="ag-chip" data-bg="https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/main/assets/furina-3d/furiba.png">🏛️ Nhà Hát Fontaine</span>
+                            <span class="ag-chip" data-bg="http://127.0.0.1:48765/furina-3d/furiba.png">🏛️ Nhà Hát Fontaine</span>
                             <span class="ag-chip" data-bg="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1920">🌌 Cyberpunk Neon</span>
                             <span class="ag-chip" data-bg="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=1920">✨ Vũ Trụ Tinh Vân</span>
                             <span class="ag-chip" data-bg="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1920">🏔️ Sương Mù Núi</span>
@@ -2074,18 +2220,22 @@
             }
         };
 
-        const saveFromPane = () => {
-            config.bgUrl = pane.querySelector("#ag-pane-bg").value.trim();
+        const saveFromPane = async () => {
+            const rawBg = pane.querySelector("#ag-pane-bg").value.trim();
             config.bgOpacity = pane.querySelector("#ag-pane-op").value.trim();
             config.petUrl = pane.querySelector("#ag-pane-pet").value.trim() || "furina-3d";
             config.accent = pane.querySelector("#ag-pane-acc").value.trim();
             config.showLangBtn = pane.querySelector("#ag-pane-show-langbtn").checked;
             config.followTyping = pane.querySelector("#ag-pane-follow-typing").checked;
             config.autoCheckUpdate = pane.querySelector("#ag-pane-auto-upd").checked;
-            localStorage.setItem("ag_mod_config", JSON.stringify(config));
+            await resolveAndPersistBgUrl(rawBg);
             applyConfig();
             syncSettingsModPaneValues();
             showToast();
+        };
+
+        pane.querySelector("#ag-pane-upload-bg").onclick = () => {
+            triggerLocalBgFilePicker(() => showToast());
         };
 
         pane.querySelector("#ag-pane-lang-vi").onclick = () => {
@@ -2139,7 +2289,7 @@
         pane.querySelector("#ag-pane-save").onclick = saveFromPane;
         pane.querySelector("#ag-pane-reset").onclick = () => {
             config = Object.assign({}, defaultConfig);
-            localStorage.setItem("ag_mod_config", JSON.stringify(config));
+            persistModConfig();
             applyConfig();
             syncSettingsModPaneValues();
             showToast();
@@ -3163,11 +3313,14 @@
             modal.innerHTML = `
                 <h3><span>💧 Antigravity Mod (Alt + M)</span><span style="cursor:pointer" id="ag-mod-close">✕</span></h3>
                 <div class="ag-field">
-                    <label>Link ảnh nền (URL)</label>
-                    <input type="text" id="ag-inp-bg" value="${config.bgUrl}">
+                    <label>Link ảnh nền (URL hoặc chọn từ máy)</label>
+                    <div style="display:flex;gap:6px;">
+                        <input type="text" id="ag-inp-bg" value="${config.bgUrl}" style="flex:1;">
+                        <button type="button" class="ag-btn ag-btn-ghost" id="ag-q-upload-bg" style="padding:5px 9px;font-size:11.5px;white-space:nowrap;">📁 Chọn ảnh</button>
+                    </div>
                     <div class="ag-chips">
                         <span class="ag-chip" data-qbg="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920">🌲 Rừng Đêm</span>
-                        <span class="ag-chip" data-qbg="https://raw.githubusercontent.com/siloneedsleep/antigravity-mod/main/assets/furina-3d/furiba.png">🏛️ Fontaine</span>
+                        <span class="ag-chip" data-qbg="http://127.0.0.1:48765/furina-3d/furiba.png">🏛️ Fontaine</span>
                         <span class="ag-chip" data-qbg="https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1920">🌌 Cyberpunk</span>
                         <span class="ag-chip" data-qbg="">🚫 Tắt nền</span>
                     </div>
@@ -3215,21 +3368,24 @@
                 modal.classList.remove("open");
                 checkForGitHubUpdates(true);
             };
+            modal.querySelector("#ag-q-upload-bg").onclick = () => {
+                triggerLocalBgFilePicker();
+            };
             modal.querySelector("#ag-mod-close").onclick = () => modal.classList.remove("open");
-            modal.querySelector("#ag-mod-save").onclick = () => {
-                config.bgUrl = modal.querySelector("#ag-inp-bg").value.trim();
+            modal.querySelector("#ag-mod-save").onclick = async () => {
+                const rawBg = modal.querySelector("#ag-inp-bg").value.trim();
                 config.bgOpacity = modal.querySelector("#ag-inp-op").value.trim();
                 config.petUrl = modal.querySelector("#ag-inp-pet").value.trim() || "furina-3d";
                 config.accent = modal.querySelector("#ag-inp-acc").value.trim();
                 config.followTyping = modal.querySelector("#ag-inp-follow").checked;
-                localStorage.setItem("ag_mod_config", JSON.stringify(config));
+                await resolveAndPersistBgUrl(rawBg);
                 applyConfig();
                 syncSettingsModPaneValues();
                 modal.classList.remove("open");
             };
             modal.querySelector("#ag-mod-reset").onclick = () => {
                 config = Object.assign({}, defaultConfig);
-                localStorage.setItem("ag_mod_config", JSON.stringify(config));
+                persistModConfig();
                 applyConfig();
                 syncSettingsModPaneValues();
                 modal.classList.remove("open");
@@ -3340,6 +3496,7 @@
         else if (wasDonateTabActive) activateCustomSettingsTab("donate");
         else if (wasCreditTabActive) activateCustomSettingsTab("credit");
         applyConfig();
+        syncConfigFromDiskServer();
         translateDOM(currentLang);
         showPostUpdateToast();
         setTimeout(() => checkForGitHubUpdates(false), 1200);
